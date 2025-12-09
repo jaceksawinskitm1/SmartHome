@@ -29,7 +29,7 @@ public class IP {
 
     public String getAddressString() {
         byte[] addr = getAddress();
-        return addr[0] + "." + addr[1] + "." + addr[2] + "." + addr[3];
+        return (addr[0] & 0xFF) + "." + (addr[1] & 0xFF) + "." + (addr[2] & 0xFF) + "." + (addr[3] & 0xFF);
     }
 
     public void setAddress(byte[] address) {
@@ -63,10 +63,10 @@ public class IP {
             throw new RuntimeException("Invalid Network.IP address string " + addressString);
 
         byte[] address = new byte[] {
-                (byte) (Integer.parseInt(split[3]) & 0xFF),
-                (byte) (Integer.parseInt(split[2]) & 0xFF),
+                (byte) (Integer.parseInt(split[0]) & 0xFF),
                 (byte) (Integer.parseInt(split[1]) & 0xFF),
-                (byte) (Integer.parseInt(split[0]) & 0xFF)
+                (byte) (Integer.parseInt(split[2]) & 0xFF),
+                (byte) (Integer.parseInt(split[3]) & 0xFF)
         };
         this.setAddress(address);
     }

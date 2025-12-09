@@ -7,7 +7,7 @@ public class Thermometer extends SHDevice {
         temperature = 20;
 
         // Network
-        registerNetworkCode("GET_TEMP", (Object[] params) -> temperature);
+        registerNetworkCode("GET_TEMPERATURE", () -> String.valueOf(temperature));
     }
 
     public void _changeTemp(double temperature) {
@@ -15,6 +15,7 @@ public class Thermometer extends SHDevice {
     }
 
     public void _enableTempSimulation(Thermometer termometr) {
+        // Only used for simulating
         this.addEvent(() -> {
             double f = 0.1;
             double a = this.getTemperature();
@@ -22,7 +23,6 @@ public class Thermometer extends SHDevice {
             this._changeTemp((a * (1.0 - f)) + (b * f));
         });
     }
-
 
     public double getTemperature() {
         return temperature;

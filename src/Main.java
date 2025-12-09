@@ -1,6 +1,7 @@
 import Devices.Heater;
 import Devices.SHManager;
 import Devices.Thermometer;
+import Network.UserDevice;
 
 public class Main {
     public static void main(String[] args) {
@@ -16,17 +17,39 @@ public class Main {
 
         zewnetrzny._changeTemp(-5);
 
-        wewnetrzny.addEvent(() -> {
-            if (wewnetrzny.getTemperature() < 10) {
-                grzejnik.setPower(10);
-            }
-            else if (wewnetrzny.getTemperature() < 15) {
-                grzejnik.setPower(5);
-            }
-            else if (wewnetrzny.getTemperature() >= 15) {
-                grzejnik.setPower(0);
-            }
-        });
+
+        menadzer.registerDevice("grzejnik", grzejnik);
+        menadzer.registerDevice("zewnetrzny", zewnetrzny);
+        menadzer.registerDevice("wewnetrzny", wewnetrzny);
+
+
+        // Wyłącz grzejnij jak temperatura będzie powyżej 15 stopni
+        menadzer.registerLogic(
+                grzejnik,
+                "SET_POWER",
+                new String[] {"0"},
+                // Conditions
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.GREATER_EQUAL, "15")
+        );
+
+        // Ustaw grzejnik na 5 jeżeli temperatura jest pomiędzy 10 a 15 stopni
+        menadzer.registerLogic(
+                grzejnik,
+                "SET_POWER",
+                new String[] {"5"},
+                // Conditions
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.LESS_THAN, "15"),
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.GREATER_EQUAL, "10")
+        );
+
+        // Ustaw grzejnik na 10 jeżeli temperatura jest poniżej 10 stopni
+        menadzer.registerLogic(
+                grzejnik,
+                "SET_POWER",
+                new String[] {"10"},
+                // Conditions
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.LESS_THAN, "10")
+        );
 
 
         grzejnik.addEvent(() -> {
@@ -34,11 +57,8 @@ public class Main {
         });
 
 
-
-        menadzer.addDevice(grzejnik);
-        menadzer.addDevice(zewnetrzny);
-        menadzer.addDevice(wewnetrzny);
-
+        UserDevice user = new UserDevice(true, menadzer.getNetworkManager(), menadzer);
+        //TODO: Request priority
 
         UI ui = new UI(zewnetrzny, wewnetrzny, grzejnik);
     }
