@@ -7,7 +7,7 @@ public class Thermometer extends SHDevice {
         temperature = 20;
 
         // Network
-        addNetworkCode("GET_TEMP", (Object[] params) -> temperature);
+        registerNetworkCode("GET_TEMP", (Object[] params) -> temperature);
     }
 
     public void _changeTemp(double temperature) {

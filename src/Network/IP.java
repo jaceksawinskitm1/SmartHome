@@ -15,8 +15,21 @@ public class IP {
         return arr;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof IP)) {
+            return false;
+        }
+        return ((IP)obj).getAddressRaw() == this.getAddressRaw();
+    }
+
     public int getAddressRaw() {
         return this.address;
+    }
+
+    public String getAddressString() {
+        byte[] addr = getAddress();
+        return addr[0] + "." + addr[1] + "." + addr[2] + "." + addr[3];
     }
 
     public void setAddress(byte[] address) {
@@ -56,15 +69,5 @@ public class IP {
                 (byte) (Integer.parseInt(split[0]) & 0xFF)
         };
         this.setAddress(address);
-    }
-
-
-    public IP getNext() {
-        byte[] address = this.getAddress().clone();
-
-        // TODO: Add octet switching
-        address[address.length - 1] += 1;
-
-        return new IP(address);
     }
 }

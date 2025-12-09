@@ -6,9 +6,29 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 public class SHManager {
+    public static class DeviceLogic {
+        public SHDevice source;
+        public NetworkManager.Request sourceReq;
+        public SHDevice target;
+        public NetworkManager.Request targetReq;
+        public String condition;
+
+        public DeviceLogic(SHDevice source, SHDevice target, String condition) {
+            this.source = source;
+            this.target = target;
+            this.condition = condition;
+        }
+
+        public void Try() {
+
+        }
+    }
+
     private NetworkManager networkManager;
 
     private ArrayList<SHDevice> devices = new ArrayList<>();
+
+    //private ArrayList<DeviceLogic>
 
     public NetworkManager getNetworkManager() {
         return networkManager;

@@ -6,9 +6,9 @@ public class Heater extends SHDevice {
     public Heater() {
 
         // Network
-        addNetworkCode("GET_POW", (Object[] params) -> power);
-        addNetworkCode("SET_POW", (Object[] params) -> {
-            this.power = (double)params[0]; return null;
+        registerNetworkCode("GET_POW", (String[] params) -> String.valueOf(power));
+        registerNetworkCode("SET_POW", (String[] params) -> {
+            this.power = Double.valueOf(params[0]); return null;
         });
     }
 
