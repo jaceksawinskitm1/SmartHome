@@ -11,9 +11,9 @@ public class NetworkManager {
 
     private HashMap<IP, SHDevice> leases = new HashMap<>();
 
-    public void sendRequest(IP source, IP target, String code, Object[] params) {
+    public Object sendRequest(IP source, IP target, String code, Object[] params) {
         // TODO: handle invalid requests
-        leases.get(target).parseNetworkRequest(code, params);
+        return leases.get(target).parseNetworkRequest(code, params);
     }
 
     public byte[] leaseIP(SHDevice device) {

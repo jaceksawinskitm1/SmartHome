@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public abstract class SHDevice {
     private byte[] ip;
@@ -12,9 +13,9 @@ public abstract class SHDevice {
     private final ArrayDeque<Runnable> actions = new ArrayDeque<>();
     private final ArrayList<Runnable> events = new ArrayList<>();
 
-    private final HashMap<String, Consumer<Object[]>> networkCodes = new HashMap<>();
+    private final HashMap<String, Function<Object[], Object>> networkCodes = new HashMap<>();
 
-    private void addNetworkCode(String code, Consumer<Object[]> exec) {
+    void addNetworkCode(String code, Function<Object[], Object> exec) {
         networkCodes.put(code, exec);
     }
 
@@ -24,12 +25,12 @@ public abstract class SHDevice {
         ip = this.manager.getNetworkManager().leaseIP(this);
     }
 
-    public void parseNetworkRequest(String code, Object[] params) {
+    public Object parseNetworkRequest(String code, Object[] params) {
         if (!networkCodes.containsKey(code)) {
             throw new RuntimeException("Unknown network code " + code);
         }
 
-        networkCodes.get(code).accept(params);
+        return networkCodes.get(code).apply(params);
     }
 
     public void queueAction(Runnable action) {
