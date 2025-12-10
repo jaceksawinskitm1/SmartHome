@@ -2,17 +2,24 @@ package Devices;
 
 public class Light extends SHDevice {
     private boolean isOn = false;
-    private double currentBrightness = 0.0;
-    private double targetBrightness = 1.0;
+    private double brightness = 0.0;
     private String hexColor = "#FFFFFF";
 
     public Light() {
         this.isOn = false;
 
         registerNetworkCode("GET_STATE", () -> isOn ? "ON" : "OFF");
-        registerNetworkCode("GET_BRIGHTNESS", () -> String.valueOf(currentBrightness));
+        registerNetworkCode("SET_STATE", (String[] params) -> {
+            this.setState(params[0].equals("ON"));
+        });
+        registerNetworkCode("GET_BRIGHTNESS", () -> String.valueOf(this.getBrightness()));
+        registerNetworkCode("SET_BRIGHTNESS", (String[] params) -> {
+            this.setBrightness(Double.parseDouble(params[0]));
+        });
         registerNetworkCode("GET_COLOR", () -> hexColor);
-
+        registerNetworkCode("SET_COLOR", (String[] params) -> {
+            this.setColor(params[0]);
+        });
     }
 
     public void setState(boolean state) {
@@ -24,12 +31,10 @@ public class Light extends SHDevice {
     }
 
     public void setBrightness(double brightness) {
-        if (brightness < 0.0) brightness = 0.0;
-        if (brightness > 1.0) brightness = 1.0;
-        this.targetBrightness = brightness;
+        this.brightness = brightness;
     }
 
     public double getBrightness() {
-        return currentBrightness;
+        return brightness;
     }
 }

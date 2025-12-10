@@ -36,6 +36,9 @@ public class UserDevice extends NetworkDevice{
         if (this.lanAccess) {
             connectToLan();
         }
+
+        Thread backgroundLoop = new Thread(this::loop);
+        backgroundLoop.start();
     }
 
 

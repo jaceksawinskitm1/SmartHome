@@ -1,23 +1,20 @@
 package Devices;
 
 public class CoffeeMachine extends SHDevice {
-    private String status = "IDLE"; // IDLE, GRINDING, BREWING, READY
+    public enum Status {IDLE, READY};
+    private Status status = Status.IDLE; // IDLE, GRINDING, BREWING, READY
     private double progress = 0.0;  // 0% - 100% postępu parzenia
     private int scheduleTimer = -1; // Odliczanie do startu (-1 = brak harmonogramu)
 
     public CoffeeMachine() {
-        this.status = "IDLE";
+        this.status = Status.IDLE;
 
-        registerNetworkCode("GET_STATUS", () -> status);
+        registerNetworkCode("GET_STATUS", () -> status.toString());
         registerNetworkCode("GET_PROGRESS", () -> String.valueOf((int)progress));
 
 
-        registerNetworkCode("MAKE_COFFEE", (String[] args) -> {
-            if (status.equals("IDLE") || status.equals("READY")) {
-                _startProcess();
-                return "STARTED";
-            }
-            return "BUSY";
+        registerNetworkCode("COFFEE", (String[] args) -> {
+            startProcess();
         });
 
         // Ustawienie harmonogramu (za ile cykli ma zrobić kawę)
@@ -26,7 +23,7 @@ public class CoffeeMachine extends SHDevice {
             if (args.length > 0) {
                 try {
                     int ticks = Integer.parseInt(args[0]);
-                    _setTimer(ticks);
+                    setTimer(ticks);
                     return "TIMER_SET_" + ticks;
                 } catch (NumberFormatException e) {
                     return "ERROR";
@@ -34,24 +31,14 @@ public class CoffeeMachine extends SHDevice {
             }
             return "ERROR";
         });
-
-        // Odbiór gotowej kawy (resetuje stan do IDLE)
-        registerNetworkCode("TAKE_COFFEE", (String[] args) -> {
-            if (status.equals("READY")) {
-                status = "IDLE";
-                progress = 0;
-                return "YUMMY";
-            }
-            return "NO_COFFEE";
-        });
     }
 
-    public void _startProcess() {
+    public void startProcess() {
         this.status = "GRINDING";
         this.progress = 0;
     }
 
-    public void _setTimer(int ticks) {
+    public void setTimer(int ticks) {
         this.scheduleTimer = ticks;
     }
 

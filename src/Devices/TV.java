@@ -8,8 +8,8 @@ public class TV extends SHDevice {
     // Konstruktor klasy TV
     public TV() {
         // Rejestracja kodów sieciowych
-        registerNetworkCode("GET_STATUS", () -> String.valueOf(isOn));  // Zwraca stan telewizora (włączony/wyłączony)
-        registerNetworkCode("SET_STATUS", (String[] params) -> this.setStatus(Boolean.parseBoolean(params[0])));  // Ustawia stan (włączony/wyłączony)
+        registerNetworkCode("GET_STATUS", () -> isOn ? "ON" : "OFF");  // Zwraca stan telewizora (ON lub OFF)
+        registerNetworkCode("SET_STATUS", (String[] params) -> this.setStatus(params[0].equals("ON")));  // Ustawia stan (włączony/wyłączony)
 
         registerNetworkCode("GET_VOLUME", () -> String.valueOf(volume));  // Zwraca poziom głośności
         registerNetworkCode("SET_VOLUME", (String[] params) -> this.setVolume(Integer.parseInt(params[0])));  // Ustawia poziom głośności
@@ -23,7 +23,9 @@ public class TV extends SHDevice {
         return isOn;
     }
 
-    // Setter stanu telewizora (włącz/wyłącz)
+
+
+    // Setter stanu telewizora na podstawie wartości "ON" lub "OFF"
     public void setStatus(boolean isOn) {
         this.isOn = isOn;
     }
