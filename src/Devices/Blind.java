@@ -6,8 +6,8 @@ public class Blind extends SHDevice {
     // Konstruktor klasy Blind
     public Blind() {
         // Rejestracja kodów sieciowych
-        registerNetworkCode("GET_STATUS", () -> String.valueOf(open));  // Zwraca stan otwarcia/otwarty
-        registerNetworkCode("SET_STATUS", (String[] params) -> this.setStatus(Boolean.parseBoolean(params[0])));  // Ustawia stan
+        registerNetworkCode("GET_STATUS", () -> open ? "ON" : "OFF");  // Zwraca stan otwarcia/otwarte (ON lub OFF)
+        registerNetworkCode("SET_STATUS", (String[] params) -> this.setStatus(params[0].equals("ON")));  // Ustawia stan (otwarte/ zamknięte)
     }
 
     // Getter statusu żaluzji
@@ -15,7 +15,7 @@ public class Blind extends SHDevice {
         return open;
     }
 
-    // Setter statusu żaluzji
+    // Setter statusu żaluzji (otwarte/zamknięte)
     public void setStatus(boolean open) {
         this.open = open;
     }
