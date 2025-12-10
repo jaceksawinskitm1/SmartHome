@@ -1,6 +1,7 @@
 import Devices.Heater;
 import Devices.SHManager;
 import Devices.Thermometer;
+import Devices.Light;
 import Network.UserDevice;
 
 public class Main {
@@ -59,6 +60,16 @@ public class Main {
 
         UserDevice user = new UserDevice(true, menadzer.getNetworkManager(), menadzer);
         //TODO: Request priority
+
+        // 1. Swiatlo
+        Light lampa_salon = new Light();
+        menadzer.registerDevice("lampa_salon", lampa_salon);
+        Light ledy_kuchnia = new Light();
+        menadzer.registerDevice("ledy_kuchnia", ledy_kuchnia);
+        Light swiatla_sypialnia = new Light();
+        menadzer.registerDevice("swiatla_sypialnia", swiatla_sypialnia);
+        Light swiatla_toaleta = new Light();
+        menadzer.registerDevice("swiatla_toaleta", swiatla_toaleta);
 
         UI ui = new UI(zewnetrzny, wewnetrzny, grzejnik);
     }

@@ -1,27 +1,35 @@
 package Devices;
 
 public class Light extends SHDevice {
-    private boolean on = false;
-    private double brightness = 100;
-    private int[] color = new int[] {255, 255, 255};
+    private boolean isOn = false;
+    private double currentBrightness = 0.0;
+    private double targetBrightness = 1.0;
+    private String hexColor = "#FFFFFF";
 
-    public boolean isOn() {
-        return this.on;
+    public Light() {
+        this.isOn = false;
+
+        registerNetworkCode("GET_STATE", () -> isOn ? "ON" : "OFF");
+        registerNetworkCode("GET_BRIGHTNESS", () -> String.valueOf(currentBrightness));
+        registerNetworkCode("GET_COLOR", () -> hexColor);
+
     }
 
-    public double getBrightness() {
-        return this.brightness;
+    public void setState(boolean state) {
+        this.isOn = state;
     }
 
-    public int[] getColor() {
-        return this.color;
+    public void setColor(String hexColor) {
+        this.hexColor = hexColor;
     }
 
     public void setBrightness(double brightness) {
-        this.brightness = brightness;
+        if (brightness < 0.0) brightness = 0.0;
+        if (brightness > 1.0) brightness = 1.0;
+        this.targetBrightness = brightness;
     }
 
-    public void setColor(int r, int g, int b) {
-        this.color = new int[] {r, g, b};
+    public double getBrightness() {
+        return currentBrightness;
     }
 }
