@@ -14,7 +14,7 @@ public class CoffeeMachine extends SHDevice {
 
         registerNetworkCode("MAKE_COFFEE", (String[] args) -> {
             if (status.equals("IDLE") || status.equals("READY")) {
-                _startProcess();
+                startProcess();
                 return "STARTED";
             }
             return "BUSY";
@@ -26,7 +26,7 @@ public class CoffeeMachine extends SHDevice {
             if (args.length > 0) {
                 try {
                     int ticks = Integer.parseInt(args[0]);
-                    _setTimer(ticks);
+                    setTimer(ticks);
                     return "TIMER_SET_" + ticks;
                 } catch (NumberFormatException e) {
                     return "ERROR";
@@ -34,24 +34,14 @@ public class CoffeeMachine extends SHDevice {
             }
             return "ERROR";
         });
-
-        // Odbiór gotowej kawy (resetuje stan do IDLE)
-        registerNetworkCode("TAKE_COFFEE", (String[] args) -> {
-            if (status.equals("READY")) {
-                status = "IDLE";
-                progress = 0;
-                return "YUMMY";
-            }
-            return "NO_COFFEE";
-        });
     }
 
-    public void _startProcess() {
+    public void startProcess() {
         this.status = "GRINDING";
         this.progress = 0;
     }
 
-    public void _setTimer(int ticks) {
+    public void setTimer(int ticks) {
         this.scheduleTimer = ticks;
     }
 
