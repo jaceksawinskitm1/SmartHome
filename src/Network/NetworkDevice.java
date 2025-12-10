@@ -1,5 +1,6 @@
 package Network;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.function.*;
 
@@ -71,6 +72,17 @@ public class NetworkDevice {
     }
 
     public String parseNetworkRequest(String code, IP source, IP target, String[] params) {
+        // ADVERT check
+        if (code.equals("ADVERT")) {
+            String res = "[";
+            for (String netcode : networkCodes.keySet()) {
+                res += netcode + ",";
+            }
+            res = res.substring(0, res.length() - 1) + "]";
+
+            return res;
+        }
+
         if (!networkCodes.containsKey(code)) {
             throw new RuntimeException("Unknown network code " + code);
         }
