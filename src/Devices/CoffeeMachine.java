@@ -1,23 +1,20 @@
 package Devices;
 
 public class CoffeeMachine extends SHDevice {
-    private String status = "IDLE"; // IDLE, GRINDING, BREWING, READY
+    public enum Status {IDLE, READY};
+    private Status status = Status.IDLE; // IDLE, GRINDING, BREWING, READY
     private double progress = 0.0;  // 0% - 100% postępu parzenia
     private int scheduleTimer = -1; // Odliczanie do startu (-1 = brak harmonogramu)
 
     public CoffeeMachine() {
-        this.status = "IDLE";
+        this.status = Status.IDLE;
 
-        registerNetworkCode("GET_STATUS", () -> status);
+        registerNetworkCode("GET_STATUS", () -> status.toString());
         registerNetworkCode("GET_PROGRESS", () -> String.valueOf((int)progress));
 
 
-        registerNetworkCode("MAKE_COFFEE", (String[] args) -> {
-            if (status.equals("IDLE") || status.equals("READY")) {
-                startProcess();
-                return "STARTED";
-            }
-            return "BUSY";
+        registerNetworkCode("COFFEE", (String[] args) -> {
+            startProcess();
         });
 
         // Ustawienie harmonogramu (za ile cykli ma zrobić kawę)
