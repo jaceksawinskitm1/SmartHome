@@ -3,6 +3,7 @@ import Devices.SHManager;
 import Devices.Thermometer;
 import Devices.AirConditioner;
 import Devices.Light;
+import Devices.AudioDevice;
 import Network.UserDevice;
 
 public class Main {
@@ -108,6 +109,15 @@ public class Main {
                 new String[] {"10"},
                 menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.GREATER_THAN, "24")
         );
+
+        //Audio
+        AudioDevice soundbarSalon = new AudioDevice();
+        AudioDevice glosnikSypialnia = new AudioDevice();
+        AudioDevice glosnikKuchnia = new AudioDevice();
+
+        menadzer.registerDevice("audio_salon", soundbarSalon);
+        menadzer.registerDevice("audio_sypialnia", glosnikSypialnia);
+        menadzer.registerDevice("audio_kuchnia", glosnikKuchnia);
 
 
 
