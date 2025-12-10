@@ -1,21 +1,22 @@
 package Devices;
 
 public class Blind extends SHDevice {
-    private boolean open = true;
+    private boolean open = false;  // Status żaluzji, otwarte/zamknięte
 
+    // Konstruktor klasy Blind
     public Blind() {
-        open = true;
+        // Rejestracja kodów sieciowych
+        registerNetworkCode("GET_STATUS", () -> String.valueOf(open));  // Zwraca stan otwarcia/otwarty
+        registerNetworkCode("SET_STATUS", (String[] params) -> this.setStatus(Boolean.parseBoolean(params[0])));  // Ustawia stan
     }
 
-    public boolean isOpened() {
-        return this.open;
+    // Getter statusu żaluzji
+    public boolean isOpen() {
+        return open;
     }
 
-    public void open() {
-        this.open = true;
-    }
-
-    public void close() {
-        this.open = false;
+    // Setter statusu żaluzji
+    public void setStatus(boolean open) {
+        this.open = open;
     }
 }
