@@ -5,7 +5,6 @@ import Devices.AirConditioner;
 import Devices.Light;
 import Devices.AudioDevice;
 import Network.UserDevice;
-import Devices.CoffeeMachine;
 
 public class Main {
     public static void main(String[] args) {
@@ -119,22 +118,6 @@ public class Main {
         menadzer.registerDevice("audio_salon", soundbarSalon);
         menadzer.registerDevice("audio_sypialnia", glosnikSypialnia);
         menadzer.registerDevice("audio_kuchnia", glosnikKuchnia);
-
-        //COFFEE
-        CoffeeMachine ekspres = new CoffeeMachine();
-        menadzer.registerDevice("ekspres_kuchnia", ekspres);
-
-
-        // Jeśli temperatura spadnie poniżej 10 stopni, zrób kawę (na rozgrzanie).
-        menadzer.registerLogic(
-                ekspres,
-                "MAKE_COFFEE",
-                new String[] {},
-                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.LESS_THAN, "10")
-        );
-
-        // Opcjonalnie: Ustawienie timera na start
-        ekspres._setTimer(50); // Za 50 cykli ekspres sam ruszy
 
 
 
