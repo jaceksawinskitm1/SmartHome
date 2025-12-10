@@ -5,13 +5,14 @@ import Devices.AirConditioner;
 import Devices.Light;
 import Devices.AudioDevice;
 import Network.UserDevice;
+import Devices.Blind;
 
 public class Main {
     public static void main(String[] args) {
         SHManager menadzer = new SHManager();
 
         Heater grzejnik = new Heater();
-
+        Blind zaluzje = new Blind();
         Thermometer zewnetrzny = new Thermometer();
 
         Thermometer wewnetrzny = new Thermometer();
@@ -24,7 +25,7 @@ public class Main {
         menadzer.registerDevice("grzejnik", grzejnik);
         menadzer.registerDevice("zewnetrzny", zewnetrzny);
         menadzer.registerDevice("wewnetrzny", wewnetrzny);
-
+        menadzer.registerDevice("zaluzje", zaluzje);
 
         // Wyłącz grzejnij jak temperatura będzie powyżej 15 stopni
         menadzer.registerLogic(
