@@ -1,6 +1,7 @@
 import Devices.Heater;
 import Devices.SHManager;
 import Devices.Thermometer;
+import Devices.AirConditioner;
 import Devices.Light;
 import Network.UserDevice;
 
@@ -61,7 +62,7 @@ public class Main {
         UserDevice user = new UserDevice(true, menadzer.getNetworkManager(), menadzer);
         //TODO: Request priority
 
-        // 1. Swiatlo
+        // Swiatlo
         Light lampa_salon = new Light();
         menadzer.registerDevice("lampa_salon", lampa_salon);
         Light ledy_kuchnia = new Light();
@@ -70,6 +71,45 @@ public class Main {
         menadzer.registerDevice("swiatla_sypialnia", swiatla_sypialnia);
         Light swiatla_toaleta = new Light();
         menadzer.registerDevice("swiatla_toaleta", swiatla_toaleta);
+
+
+        //Klimatyzacja
+        AirConditioner klima = new AirConditioner();
+        menadzer.registerDevice("klimatyzacja", klima);
+
+        //(< 15 stopni)
+        menadzer.registerLogic(
+                grzejnik,
+                "SET_POWER",
+                new String[] {"10"},
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.LESS_THAN, "15")
+        );
+
+        //Wyłączamy klimatyzację
+        menadzer.registerLogic(
+                klima,
+                "SET_COOLING",
+                new String[] {"0"},
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.LESS_THAN, "15")
+        );
+
+        //(> 24 stopnie)
+        //Wyłączamy grzejnik
+        menadzer.registerLogic(
+                grzejnik,
+                "SET_POWER",
+                new String[] {"0"},
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.GREATER_THAN, "24")
+        );
+        //Włączamy klimatyzację
+        menadzer.registerLogic(
+                klima,
+                "SET_COOLING",
+                new String[] {"10"},
+                menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.GREATER_THAN, "24")
+        );
+
+
 
         UI ui = new UI(zewnetrzny, wewnetrzny, grzejnik);
     }
