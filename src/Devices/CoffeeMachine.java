@@ -10,7 +10,7 @@ public class CoffeeMachine extends SHDevice {
         this.status = Status.IDLE;
 
         registerNetworkCode("GET_STATUS", () -> status.toString());
-        registerNetworkCode("GET_PROGRESS", () -> String.valueOf((int)progress));
+        registerNetworkCode("GET_PROGRESS", () -> getProgress());
 
 
         registerNetworkCode("COFFEE", (String[] args) -> {
@@ -38,12 +38,16 @@ public class CoffeeMachine extends SHDevice {
         this.progress = 0;
     }
 
+    public double getProgress() {
+        return this.progress;
+    }
+
     public void setTimer(int ticks) {
         this.scheduleTimer = ticks;
     }
 
 
     public String getStatus() {
-        return status + " (" + (int)progress + "%)";
+        return status + " (" + (int)getProgress() + "%)";
     }
 }

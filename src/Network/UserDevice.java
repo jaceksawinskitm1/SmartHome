@@ -6,7 +6,7 @@ import Devices.SHManager;
 import java.util.ArrayDeque;
 import java.util.concurrent.TimeUnit;
 
-public class UserDevice extends NetworkDevice{
+public class UserDevice extends NetworkDevice {
     private boolean lanAccess = true;
     private final IP shManager;
 
