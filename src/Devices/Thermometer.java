@@ -7,7 +7,7 @@ public class Thermometer extends SHDevice {
         temperature = 20;
 
         // Network
-        registerNetworkCode("GET_TEMPERATURE", () -> String.valueOf(temperature));
+        registerNetworkCode("GET_TEMPERATURE", "FLOAT", () -> String.valueOf(temperature));
     }
 
     public void _changeTemp(double temperature) {

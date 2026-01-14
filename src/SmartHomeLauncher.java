@@ -189,7 +189,7 @@ public class SmartHomeLauncher {
                 case TV tv -> {
                     JCheckBox on = new JCheckBox("Power", tv.isOn());
                     on.addActionListener(e -> tv.setStatus(on.isSelected()));
-                    JSlider vol = new JSlider(0, 100, tv.getVolume());
+                    JSlider vol = new JSlider(0, 100, (int)(tv.getVolume() * 100));
                     vol.addChangeListener(e -> tv.setVolume(vol.getValue()));
 
                     propertiesPanel.add(on);
@@ -199,12 +199,12 @@ public class SmartHomeLauncher {
                 }
                 case GarageDoor gd -> {
                     JProgressBar vis = new JProgressBar(0, 100);
-                    vis.setValue(100 - gd.getPosition()); // 100=Closed(full), 0=Open
+                    vis.setValue(100 - (int)(gd.getPosition() * 100)); // 100=Closed(full), 0=Open
 
                     vis.setString("Stan: " + gd.getState());
                     vis.setStringPainted(true);
 
-                    JSlider pos = new JSlider(0, 100, gd.getPosition());
+                    JSlider pos = new JSlider(0, 100, (int)(gd.getPosition() * 100));
                     pos.setInverted(true); // 100 (zamknięte) na dole
 
                     pos.addChangeListener(e -> gd.setPosition(pos.getValue()));

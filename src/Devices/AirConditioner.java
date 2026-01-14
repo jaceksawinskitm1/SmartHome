@@ -9,15 +9,15 @@ public class AirConditioner extends SHDevice {
     public AirConditioner() {
         this.isOn = false;
 
-        registerNetworkCode("GET_STATE", () -> isOn ? "ON" : "OFF");
+        registerNetworkCode("GET_STATE", "BOOL", () -> String.valueOf(isOn));
 
-        registerNetworkCode("SET_STATE", (String[] params) -> {
+        registerNetworkCode("SET_STATE", "BOOL", (String[] params) -> {
             this.isOn = (Objects.equals(params[0], "ON"));
         });
 
-        registerNetworkCode("GET_POWER", () -> String.valueOf(getCoolingPower()));
+        registerNetworkCode("GET_POWER", "FLOAT", () -> String.valueOf(getCoolingPower()));
 
-        registerNetworkCode("SET_POWER", (String[] arg) -> {
+        registerNetworkCode("SET_POWER", "FLOAT", (String[] arg) -> {
             double val = Double.parseDouble(arg[0]);
             setCoolingPower(val);
         });

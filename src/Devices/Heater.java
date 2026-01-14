@@ -18,8 +18,8 @@ public class Heater extends SHDevice {
     public Heater() {
 
         // Network
-        registerNetworkCode("GET_POWER", () -> String.valueOf(power));
-        registerNetworkCode("SET_POWER", (String[] params) -> this.setPower(Double.parseDouble(params[0])));
+        registerNetworkCode("GET_POWER", "RANGE", () -> String.valueOf(power));
+        registerNetworkCode("SET_POWER", "RANGE", (String[] params) -> this.setPower(Double.parseDouble(params[0])));
     }
 
     public double getPower() {

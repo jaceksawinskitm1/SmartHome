@@ -204,7 +204,7 @@ public class SHManager extends NetworkDevice {
         this.leaseIP(this.getNetworkManager());
 
         // Network
-        registerNetworkCode("ACTION", (IP[] ips, String[] params) -> {
+        registerNetworkCode("ACTION", "NULL", (IP[] ips, String[] params) -> {
             if (params.length < 3) {
                 throw new NetworkManager.NetworkException(ips[0], ips[1], "To few parameters for an ACTION request: expected 3, got " + params.length);
             }

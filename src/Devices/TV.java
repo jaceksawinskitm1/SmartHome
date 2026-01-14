@@ -2,20 +2,20 @@ package Devices;
 
 public class TV extends SHDevice {
     private boolean isOn = false;  // Stan telewizora (włączony/wyłączony)
-    private int volume = 50;       // Poziom głośności (domyślnie 50)
+    private double volume = 0.5;       // Poziom głośności (domyślnie 50)
     private int channel = 1;       // Numer kanału (domyślnie 1)
 
     // Konstruktor klasy TV
     public TV() {
         // Rejestracja kodów sieciowych
-        registerNetworkCode("GET_STATUS", () -> isOn ? "ON" : "OFF");  // Zwraca stan telewizora (ON lub OFF)
-        registerNetworkCode("SET_STATUS", (String[] params) -> this.setStatus(params[0].equals("ON")));  // Ustawia stan (włączony/wyłączony)
+        registerNetworkCode("GET_STATUS", "BOOL", () -> String.valueOf(isOn));  // Zwraca stan telewizora (ON lub OFF)
+        registerNetworkCode("SET_STATUS", "BOOL", (String[] params) -> this.setStatus(params[0].equals("true")));  // Ustawia stan (włączony/wyłączony)
 
-        registerNetworkCode("GET_VOLUME", () -> String.valueOf(volume));  // Zwraca poziom głośności
-        registerNetworkCode("SET_VOLUME", (String[] params) -> this.setVolume(Integer.parseInt(params[0])));  // Ustawia poziom głośności
+        registerNetworkCode("GET_VOLUME", "RANGE", () -> String.valueOf(volume));  // Zwraca poziom głośności
+        registerNetworkCode("SET_VOLUME", "RANGE", (String[] params) -> this.setVolume(Integer.parseInt(params[0])));  // Ustawia poziom głośności
 
-        registerNetworkCode("GET_CHANNEL", () -> String.valueOf(channel));  // Zwraca numer kanału
-        registerNetworkCode("SET_CHANNEL", (String[] params) -> this.setChannel(Integer.parseInt(params[0])));  // Ustawia numer kanału
+        registerNetworkCode("GET_CHANNEL", "INT", () -> String.valueOf(channel));  // Zwraca numer kanału
+        registerNetworkCode("SET_CHANNEL", "INT", (String[] params) -> this.setChannel(Integer.parseInt(params[0])));  // Ustawia numer kanału
     }
 
     // Getter stanu telewizora
@@ -31,13 +31,13 @@ public class TV extends SHDevice {
     }
 
     // Getter poziomu głośności
-    public int getVolume() {
+    public double getVolume() {
         return volume;
     }
 
     // Setter poziomu głośności
-    public void setVolume(int volume) {
-        if (volume >= 0 && volume <= 100) {
+    public void setVolume(double volume) {
+        if (volume >= 0 && volume <= 1) {
             this.volume = volume;  // Poziom głośności w zakresie 0-100
         }
     }

@@ -8,16 +8,16 @@ public class Light extends SHDevice {
     public Light() {
         this.isOn = false;
 
-        registerNetworkCode("GET_STATE", () -> getState() ? "ON" : "OFF");
-        registerNetworkCode("SET_STATE", (String[] params) -> {
-            this.setState(params[0].equals("ON"));
+        registerNetworkCode("GET_STATE", "BOOL", () -> String.valueOf(getState()));
+        registerNetworkCode("SET_STATE", "BOOL", (String[] params) -> {
+            this.setState(params[0].equals("true"));
         });
-        registerNetworkCode("GET_BRIGHTNESS", () -> String.valueOf(this.getBrightness()));
-        registerNetworkCode("SET_BRIGHTNESS", (String[] params) -> {
+        registerNetworkCode("GET_BRIGHTNESS", "RANGE", () -> String.valueOf(this.getBrightness()));
+        registerNetworkCode("SET_BRIGHTNESS", "RANGE", (String[] params) -> {
             this.setBrightness(Double.parseDouble(params[0]));
         });
-        registerNetworkCode("GET_COLOR", () -> getColor());
-        registerNetworkCode("SET_COLOR", (String[] params) -> {
+        registerNetworkCode("GET_COLOR", "COLOR", () -> getColor());
+        registerNetworkCode("SET_COLOR", "COLOR", (String[] params) -> {
             this.setColor(params[0]);
         });
     }

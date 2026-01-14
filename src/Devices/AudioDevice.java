@@ -9,9 +9,9 @@ public class AudioDevice extends SHDevice {
         this.targetVolume = 0.0;
 
         // Pobierz aktualną głośność
-        registerNetworkCode("GET_VOLUME", () -> String.valueOf((int)currentVolume));
+        registerNetworkCode("GET_VOLUME", "RANGE", () -> String.valueOf((int)currentVolume));
 
-        registerNetworkCode("SET_VOLUME", (String[] args) -> {
+        registerNetworkCode("SET_VOLUME", "RANGE", (String[] args) -> {
             if (args.length > 0) {
                 try {
                     double vol = Double.parseDouble(args[0]);
@@ -24,7 +24,7 @@ public class AudioDevice extends SHDevice {
             return "ERROR_NO_ARGS";
         });
 
-        registerNetworkCode("MUTE", (String[] args) -> {
+        registerNetworkCode("MUTE", "NULL", (String[] args) -> {
             _setVolume(0);
             return "MUTED";
         });

@@ -114,11 +114,13 @@ public class UserUI extends JFrame {
         String name;
         boolean setter;
         boolean getter;
+        String type;
 
-        public Value(String name, boolean setter, boolean getter) {
+        public Value(String name, String type, boolean setter, boolean getter) {
             this.name = name;
             this.getter = getter;
             this.setter = setter;
+            this.type = type;
         }
     }
 
@@ -136,15 +138,21 @@ public class UserUI extends JFrame {
             setter = true;
         }
 
+        String type = c.replaceAll(">$","");
+        type = type.replaceAll("^.*<","");
+
+        c = c.replaceAll("<.*>$", "");
+
         for (Value v : values) {
             if (Objects.equals(v.name, c)) {
                 v.setter |= setter;
                 v.getter |= getter;
+                v.type = type;
                 return;
             }
         }
 
-        values.add(new Value(c, setter, getter));
+        values.add(new Value(c, type, setter, getter));
     }
 
     private void buildControls(String rawCodes, IP target) {
@@ -178,17 +186,18 @@ public class UserUI extends JFrame {
                 btn.addActionListener(e -> sendRequest(target, "GET_" + val.name, new String[]{}, valLbl));
                 row.add(btn);
                 row.add(valLbl);
+                btn.doClick();
             }
 
             if (val.setter) {
                 JTextField paramField = new JTextField(5);
-                JButton setBtn = new JButton("Set");
-                setBtn.addActionListener(e -> {
+                JButton btn = new JButton("Set");
+                btn.addActionListener(e -> {
                     String txt = paramField.getText();
                     String[] params = txt.isEmpty() ? new String[]{} : txt.split(",");
                     sendRequest(target, "SET_" + val.name, params, null);
                 });
-                row.add(setBtn);
+                row.add(btn);
                 row.add(paramField);
             }
             panel.add(row);

@@ -12,8 +12,8 @@ public class LightDetector extends SHDevice {
     // Konstruktor klasy LightDetector
     public LightDetector() {
         // Rejestracja kodów sieciowych
-        registerNetworkCode("GET_STATE", () -> state.name());  // Zwraca stan (DAY lub NIGHT)
-        registerNetworkCode("SET_STATE", (String[] params) -> this.setState(LightState.valueOf(params[0])));  // Ustawia stan
+        registerNetworkCode("GET_STATE", "STRING", () -> state.name());  // Zwraca stan (DAY lub NIGHT)
+        registerNetworkCode("SET_STATE", "STRING", (String[] params) -> this.setState(LightState.valueOf(params[0])));  // Ustawia stan
     }
 
     // Getter stanu wykrywacza

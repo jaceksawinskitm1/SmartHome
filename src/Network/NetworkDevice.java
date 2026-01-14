@@ -47,28 +47,28 @@ public class NetworkDevice {
 
     private final HashMap<String, BiFunction<IP[], String[], String>> networkCodes = new HashMap<>();
 
-    protected void registerNetworkCode(String code, BiFunction<IP[], String[], String> exec) {
-        networkCodes.put(code, exec);
+    protected void registerNetworkCode(String code, String type, BiFunction<IP[], String[], String> exec) {
+        networkCodes.put(code + "<" + type + ">", exec);
     }
 
-    protected void registerNetworkCode(String code, Function<String[], String> exec) {
-        networkCodes.put(code, (IP[] _, String[] params) -> exec.apply(params));
+    protected void registerNetworkCode(String code, String type, Function<String[], String> exec) {
+        networkCodes.put(code + "<" + type + ">", (IP[] _, String[] params) -> exec.apply(params));
     }
 
-    protected void registerNetworkCode(String code, Supplier<String> exec) {
-        networkCodes.put(code, (IP[] _, String[] _) -> exec.get());
+    protected void registerNetworkCode(String code, String type, Supplier<String> exec) {
+        networkCodes.put(code + "<" + type + ">", (IP[] _, String[] _) -> exec.get());
     }
 
-    protected void registerNetworkCode(String code, BiConsumer<IP[], String[]> exec) {
-        networkCodes.put(code, (IP[] ips, String[] params) -> {exec.accept(ips, params); return null;});
+    protected void registerNetworkCode(String code, String type, BiConsumer<IP[], String[]> exec) {
+        networkCodes.put(code + "<" + type + ">", (IP[] ips, String[] params) -> {exec.accept(ips, params); return null;});
     }
 
-    protected void registerNetworkCode(String code, Consumer<String[]> exec) {
-        networkCodes.put(code, (IP[] _, String[] params) -> {exec.accept(params); return null;});
+    protected void registerNetworkCode(String code, String type, Consumer<String[]> exec) {
+        networkCodes.put(code + "<" + type + ">", (IP[] _, String[] params) -> {exec.accept(params); return null;});
     }
 
-    protected void registerNetworkCode(String code, Runnable exec) {
-        networkCodes.put(code, (IP[] _, String[] _) -> {exec.run(); return null;});
+    protected void registerNetworkCode(String code, String type, Runnable exec) {
+        networkCodes.put(code + "<" + type + ">", (IP[] _, String[] _) -> {exec.run(); return null;});
     }
 
     public String parseNetworkRequest(String code, IP source, IP target, String[] params) {
@@ -83,11 +83,13 @@ public class NetworkDevice {
             return res;
         }
 
-        if (!networkCodes.containsKey(code)) {
-            throw new RuntimeException("Unknown network code " + code);
+        for (String nc : networkCodes.keySet()) {
+            if (nc.replaceAll("<.*>$", "").equals(code)) {
+                return networkCodes.get(nc).apply(new IP[]{source, target}, params);
+            }
         }
 
-        return networkCodes.get(code).apply(new IP[]{source, target}, params);
+        throw new RuntimeException("Unknown network code " + code);
     }
 
     public NetworkManager.Request createRequest(IP target, String code, String[] params) {

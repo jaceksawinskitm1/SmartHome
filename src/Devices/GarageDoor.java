@@ -1,7 +1,7 @@
 package Devices;
 
 public class GarageDoor extends SHDevice {
-    private int position = 100;  // Pozycja bramy, 0 = otwarta, 100 = zamknięta
+    private double position = 1.0;  // Pozycja bramy, 0.0 = otwarta, 1.0 = zamknięta
     private DoorState state = DoorState.CLOSED;  // Początkowy stan bramy (zamknięta)
 
     // Enum stanu bramy
@@ -14,24 +14,24 @@ public class GarageDoor extends SHDevice {
     // Konstruktor klasy GarageDoor
     public GarageDoor() {
         // Rejestracja kodów sieciowych
-        registerNetworkCode("GET_POSITION", () -> String.valueOf(position));  // Zwraca pozycję bramy
-        registerNetworkCode("SET_POSITION", (String[] params) -> this.setPosition(Integer.parseInt(params[0])));  // Ustawia pozycję bramy
+        registerNetworkCode("GET_POSITION", "RANGE", () -> String.valueOf(getPosition()));  // Zwraca pozycję bramy
+        registerNetworkCode("SET_POSITION", "RANGE", (String[] params) -> this.setPosition(Integer.parseInt(params[0])));  // Ustawia pozycję bramy
 
-        registerNetworkCode("GET_STATE", () -> state.name());  // Zwraca stan bramy (OPEN, CLOSED, PARTIALLY_OPENED)
-        registerNetworkCode("SET_STATE", (String[] params) -> this.setState(DoorState.valueOf(params[0])));  // Ustawia stan bramy
+        registerNetworkCode("GET_STATE", "STRING", () -> state.name());  // Zwraca stan bramy (OPEN, CLOSED, PARTIALLY_OPENED)
+        registerNetworkCode("SET_STATE", "STRING", (String[] params) -> this.setState(DoorState.valueOf(params[0])));  // Ustawia stan bramy
     }
 
     // Getter pozycji bramy
-    public int getPosition() {
+    public double getPosition() {
         return position;
     }
 
     // Setter pozycji bramy (0-100)
-    public void setPosition(int position) {
+    public void setPosition(double position) {
         if (position < 0) {
             this.position = 0;  // Brama nie może być otwarta poniżej 0
-        } else if (position > 100) {
-            this.position = 100;  // Brama nie może być zamknięta powyżej 100
+        } else if (position > 1.0) {
+            this.position = 1.0;  // Brama nie może być zamknięta powyżej 100
         } else {
             this.position = position;  // Ustawia pozycję bramy
         }
@@ -39,7 +39,7 @@ public class GarageDoor extends SHDevice {
         // Ustawienie stanu na podstawie pozycji
         if (position == 0) {
             state = DoorState.OPEN;  // Brama otwarta
-        } else if (position == 100) {
+        } else if (position == 1.0) {
             state = DoorState.CLOSED;  // Brama zamknięta
         } else {
             state = DoorState.PARTIALLY_OPENED;  // Brama częściowo otwarta
@@ -61,11 +61,11 @@ public class GarageDoor extends SHDevice {
                 setPosition(0);  // Ustawia bramę na otwartą
                 break;
             case CLOSED:
-                setPosition(100);  // Ustawia bramę na zamkniętą
+                setPosition(1.0);  // Ustawia bramę na zamkniętą
                 break;
             case PARTIALLY_OPENED:
                 // Można ustawić dowolną pozycję pomiędzy 1 a 99, np. na 50
-                setPosition(50);
+                setPosition(0.5);
                 break;
         }
     }

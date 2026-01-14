@@ -9,17 +9,17 @@ public class CoffeeMachine extends SHDevice {
     public CoffeeMachine() {
         this.status = Status.IDLE;
 
-        registerNetworkCode("GET_STATUS", () -> status.toString());
-        registerNetworkCode("GET_PROGRESS", () -> getProgress());
+        registerNetworkCode("GET_STATUS", "STRING", () -> status.toString());
+        registerNetworkCode("GET_PROGRESS", "FLOAT", () -> String.valueOf(getProgress()));
 
 
-        registerNetworkCode("COFFEE", (String[] args) -> {
+        registerNetworkCode("COFFEE", "NULL", (String[] args) -> {
             startProcess();
         });
 
         // Ustawienie harmonogramu (za ile cykli ma zrobić kawę)
         // np. SET_TIMER 100 -> za 100 cykli włączy się ekspres
-        registerNetworkCode("SET_TIMER", (String[] args) -> {
+        registerNetworkCode("SET_TIMER", "FLOAT", (String[] args) -> {
             if (args.length > 0) {
                 try {
                     int ticks = Integer.parseInt(args[0]);
