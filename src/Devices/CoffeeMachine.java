@@ -1,7 +1,7 @@
 package Devices;
 
 public class CoffeeMachine extends SHDevice {
-    public enum Status {IDLE, READY};
+    public enum Status {IDLE, READY, GRINDING};
     private Status status = Status.IDLE; // IDLE, GRINDING, BREWING, READY
     private double progress = 0.0;  // 0% - 100% postępu parzenia
     private int scheduleTimer = -1; // Odliczanie do startu (-1 = brak harmonogramu)
@@ -34,7 +34,7 @@ public class CoffeeMachine extends SHDevice {
     }
 
     public void startProcess() {
-        this.status = "GRINDING";
+        this.status = Status.GRINDING;
         this.progress = 0;
     }
 
