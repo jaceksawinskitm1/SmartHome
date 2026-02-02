@@ -68,15 +68,30 @@ public class UserUI extends JFrame {
     private void scanNetwork() {
         discoveredIPsModel.clear();
         log("Rozpoczynanie skanowania...");
-        // Skanujemy zakres .2 do .20 dla demo
-        for (int i = 2; i <= 20; i++) {
-            String targetIP = "192.168.0." + i;
+        String managerIp = networkManager.createRequest(userDevice.getIP(), new IP(
+                new byte[] {
+                        userDevice.getIP().getAddress()[0],
+                        userDevice.getIP().getAddress()[1],
+                        userDevice.getIP().getAddress()[2],
+                        (byte) 255
+                }),
+                "FINDSHMANAGER", new String[]{}
+        ).send().getResult();
+        String devIps =  networkManager.createRequest(userDevice.getIP(), new IP(managerIp),
+                "GET_DEVICES", new String[]{}
+        ).send().getResult();
+        String clean = devIps.replace("[", "").replace("]", "");
+        String[] ips = clean.split(",");
+
+        for (String targetIP : ips) {
             new Thread(() -> {
                 try {
                     NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(), new IP(targetIP), "ADVERT", new String[]{});
                     r.send();
                     if (!r.getResult().startsWith("ERROR")) {
                         SwingUtilities.invokeLater(() -> {
+                            if (Objects.equals(r.getResult(), "")) // Device has no netcodes
+                                return;
                             if(!discoveredIPsModel.contains(targetIP)) discoveredIPsModel.addElement(targetIP);
                         });
                     }

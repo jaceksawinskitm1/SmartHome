@@ -204,23 +204,19 @@ public class SHManager extends NetworkDevice {
         this.leaseIP(this.getNetworkManager());
 
         // Network
-        registerNetworkCode("ACTION", "NULL", (IP[] ips, String[] params) -> {
-            if (params.length < 3) {
-                throw new NetworkManager.NetworkException(ips[0], ips[1], "To few parameters for an ACTION request: expected 3, got " + params.length);
+        registerNetworkCode("FINDSHMANAGER", "NULL", (IP[] ips, String[] params) -> this.getIP().getAddressString());
+        registerNetworkCode("GET_DEVICES", "IPS", (IP[] ips, String[] params) -> {
+            if (devices.isEmpty()) {
+                return "[]";
             }
 
-            String devID = params[0];
+            String res = "[";
+            for (SHDevice dev : devices.values()) {
+                res += dev.getIP().getAddressString() + ",";
+            }
+            res = res.substring(0, res.length() - 1) + "]";
 
-            String code2 = params[1];
-
-            IP source2 = this.getIP();
-            IP target2 = devices.get(devID).getIP();
-
-            String[] params2 = new String[params.length - 2];
-            System.arraycopy(params, 2, params2, 0, params.length - 2);
-
-            networkManager.createRequest(source2, target2, code2, params2).send();
-            return null;
+            return res;
         });
     }
 

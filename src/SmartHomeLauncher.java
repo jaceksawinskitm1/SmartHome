@@ -1,4 +1,5 @@
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.*;
@@ -115,7 +116,7 @@ public class SmartHomeLauncher {
             add(bottomPanel, BorderLayout.SOUTH);
 
             // Timer do odświeżania UI (podgląd stanu na żywo)
-            new javax.swing.Timer(500, e -> {
+            new Timer(500, e -> {
                 String selected = deviceList.getSelectedValue();
                 if(selected != null) showDeviceProperties(deviceMap.get(selected));
             }).start();
@@ -146,7 +147,13 @@ public class SmartHomeLauncher {
             }
         }
 
+        SHDevice current = null;
         private void showDeviceProperties(SHDevice device) {
+            if (device.equals(current))
+                return;
+
+            current = device;
+
             propertiesPanel.removeAll();
             propertiesPanel.setBorder(new TitledBorder(device.getClass().getSimpleName()));
 
@@ -249,11 +256,10 @@ public class SmartHomeLauncher {
                 default -> {
                     // Default fallback for simple devices
                     propertiesPanel.add(new JLabel("Generic Device: " + networkManager.createRequest(shManager.getIP(), device.getIP(), "ADVERT", new String[]{})));
-
-                    propertiesPanel.revalidate();
-                    propertiesPanel.repaint();
                 }
             }
+            propertiesPanel.revalidate();
+            propertiesPanel.repaint();
         }
     }
 }

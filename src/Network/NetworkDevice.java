@@ -74,6 +74,10 @@ public class NetworkDevice {
     public String parseNetworkRequest(String code, IP source, IP target, String[] params) {
         // ADVERT check
         if (code.equals("ADVERT")) {
+            if (networkCodes.size() == 0) {
+                return "";
+            }
+
             String res = "[";
             for (String netcode : networkCodes.keySet()) {
                 res += netcode + ",";
@@ -89,7 +93,10 @@ public class NetworkDevice {
             }
         }
 
-        throw new RuntimeException("Unknown network code " + code);
+        if (target.getAddress()[3] != (byte)255)
+            throw new RuntimeException("Unknown network code " + code);
+
+        return null;
     }
 
     public NetworkManager.Request createRequest(IP target, String code, String[] params) {

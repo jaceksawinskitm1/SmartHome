@@ -1,5 +1,8 @@
 package Network;
 
+import Devices.SHDevice;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.regex.Matcher;
@@ -19,12 +22,19 @@ public class NetworkManager {
                   // TODO: handle invalid requests
                   this.received = true;
 
-                  var targetDevice = lookupIP(target);
-                  if (targetDevice == null) {
+                  var targetDevices = lookupIP(target);
+                  if (targetDevices.length == 0) {
                       throw new NetworkException(source, target, "Invalid target IP; non-existant host");
                   }
-                  this.result = targetDevice.parseNetworkRequest(code, source, target, params);
+                  this.result = "";
+                  for (NetworkDevice dev : targetDevices) {
+                      String res = dev.parseNetworkRequest(code, source, target, params);
+                      if (res != null && !res.equals("")) {
+                          this.result += res + "\n";
+                      }
+                  }
 
+                  this.result = this.result.trim();
                   return this;
             }
 
@@ -89,12 +99,13 @@ public class NetworkManager {
             public String getResult() { return result; }
       }
 
-      private NetworkDevice lookupIP(IP target) {
+      private NetworkDevice[] lookupIP(IP target) {
+          ArrayList<NetworkDevice> res = new ArrayList<>();
           for (IP lease : leases.keySet()) {
               if (lease.equals(target))
-                  return leases.get(lease);
+                  res.add(leases.get(lease));
           }
-          return null;
+          return res.toArray(new NetworkDevice[]{});
       }
 
       public Request createRequest(IP source, IP target, String code, String[] params) {

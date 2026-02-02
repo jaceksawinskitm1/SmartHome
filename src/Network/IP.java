@@ -18,7 +18,15 @@ public class IP {
         if (!(obj instanceof IP)) {
             return false;
         }
-        return ((IP)obj).getAddressRaw() == this.getAddressRaw();
+        byte[] thisAddress = this.getAddress();
+        byte[] objAddress = ((IP)obj).getAddress();
+        if (thisAddress[0] != objAddress[0])
+            return false;
+        if (thisAddress[1] != objAddress[1])
+            return false;
+        if (thisAddress[2] != objAddress[2])
+            return false;
+        return thisAddress[3] == objAddress[3] || thisAddress[3] == (byte)255 || objAddress[3] == (byte)255;
     }
 
     public int getAddressRaw() {
