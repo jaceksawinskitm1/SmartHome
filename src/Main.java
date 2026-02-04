@@ -26,7 +26,7 @@ public class Main {
         menadzer.registerDevice("wewnetrzny", wewnetrzny);
 
 
-        // Wyłącz grzejnij jak temperatura będzie powyżej 15 stopni
+        /*// Wyłącz grzejnij jak temperatura będzie powyżej 15 stopni
         menadzer.registerLogic(
                 grzejnik,
                 "SET_POWER",
@@ -58,6 +58,7 @@ public class Main {
         grzejnik.addEvent(() -> {
             System.out.println("Moc grzejnika: " + grzejnik.getPower());
         });
+         */
 
 
         UserDevice user = new UserDevice(true, menadzer.getNetworkManager(), menadzer);
@@ -79,6 +80,7 @@ public class Main {
         menadzer.registerDevice("klimatyzacja", klima);
 
         //(< 15 stopni)
+        /*
         menadzer.registerLogic(
                 grzejnik,
                 "SET_POWER",
@@ -109,6 +111,8 @@ public class Main {
                 new String[] {"10"},
                 menadzer.createComparator(wewnetrzny, "GET_TEMPERATURE", SHManager.Comparator.Condition.GREATER_THAN, "24")
         );
+
+         */
 
         //Audio
         AudioDevice soundbarSalon = new AudioDevice();
