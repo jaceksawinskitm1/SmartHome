@@ -13,6 +13,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Objects;
 
@@ -53,31 +54,93 @@ public class UserUI extends JFrame {
       if (isNew) {
         refreshGraph();
       }
+      SwingUtilities.invokeLater(() -> {
+        JPanel dialogPanel = new JPanel(new BorderLayout());
+        JPanel conditionPanel = new JPanel(new GridLayout(2, 2));
+        //conditionPanel.setPreferredSize(new Dimension(600, 250));
+        JOptionPane pane = new JOptionPane(dialogPanel);
+        JDialog dialog = pane.createDialog("Logic Config");
 
-      JPanel dialogPanel = new JPanel();
 
-      NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
-          edge.from.deviceIP, "ADVERT", new String[] {});
-      r.send();
-      String raw = r.getResult();
+        NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
+                edge.from.deviceIP, "ADVERT", new String[]{});
+        r.send();
+        String rawFrom = r.getResult();
 
-      // TODO: FINISH
-      JComboBox parameter = new JComboBox();
-      JComboBox condType = new JComboBox(new String[] {
-          "Equals",
-          "Not equals",
-          "Greater than",
-          "Less than",
-          "Greater than or equal to",
-          "Less than or equal to"
+        // TODO: FINISH
+        JComboBox parameter = generateValuesCombo(rawFrom);
+
+        JComponent condValue = generateCondValueField((String) parameter.getSelectedItem(), rawFrom);
+
+        JComboBox condType = new JComboBox(new String[]{
+                "Equals",
+                "Not equals",
+                "Greater than",
+                "Less than",
+                "Greater than or equal to",
+                "Less than or equal to"
+        });
+
+        parameter.addActionListener(new ActionListener() {
+          @Override
+          public void actionPerformed(ActionEvent e) {
+            conditionPanel.removeAll();
+
+            System.out.println("raw: " + rawFrom);
+            conditionPanel.add(parameter);
+            conditionPanel.add(condType);
+            conditionPanel.add(generateCondValueField((String) parameter.getSelectedItem(), rawFrom));
+
+            conditionPanel.revalidate();
+            conditionPanel.repaint();
+            pane.revalidate();
+            pane.repaint();
+            dialog.pack();
+          }
+        });
+
+        JPanel top = new JPanel();
+        top.add(parameter);
+        top.add(condType);
+        conditionPanel.add(top);
+        conditionPanel.add(condValue);
+
+
+        r = networkManager.createRequest(userDevice.getIP(),
+                edge.to.deviceIP, "ADVERT", new String[]{});
+        r.send();
+        String rawTo = r.getResult();
+
+        JPanel actionPanel = new JPanel();
+        JComboBox actionCode = generateActionCodeCombo(rawTo);
+        JComponent actionValue = generateCondValueField((String) actionCode.getSelectedItem(), rawTo);
+        actionCode.addActionListener(new ActionListener() {
+          @Override
+          public void actionPerformed(ActionEvent e) {
+            actionPanel.removeAll();
+
+            actionPanel.add(actionCode);
+            actionPanel.add(generateCondValueField((String) actionCode.getSelectedItem(), rawTo));
+
+            actionPanel.revalidate();
+            actionPanel.repaint();
+            pane.revalidate();
+            pane.repaint();
+            dialog.pack();
+          }
+        });
+
+
+        actionPanel.add(actionCode);
+        actionPanel.add(actionValue);
+
+        dialogPanel.add(conditionPanel, BorderLayout.NORTH);
+        dialogPanel.add(actionPanel, BorderLayout.SOUTH);
+
+
+        dialog.pack();
+        dialog.setVisible(true);
       });
-      dialogPanel.add(condType);
-
-      JOptionPane.showMessageDialog(
-          graphPanel,
-          dialogPanel,
-          "Logic Config",
-          JOptionPane.INFORMATION_MESSAGE);
     });
 
     JPanel refreshPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -167,49 +230,6 @@ public class UserUI extends JFrame {
     }
   }
 
-  /*
-   * private void loadDeviceUI(String ipStr) {
-   * controlsPanel.removeAll();
-   * controlsPanel.add(new JLabel("Ładowanie interfejsu..."));
-   * controlsPanel.revalidate();
-   * controlsPanel.repaint();
-   * 
-   * new Thread(() -> {
-   * IP target = new IP(ipStr);
-   * NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
-   * target, "ADVERT", new String[]{});
-   * r.send();
-   * String raw = r.getResult();
-   * 
-   * SwingUtilities.invokeLater(() -> {
-   * controlsPanel.removeAll();
-   * if (raw.startsWith("ERROR") || raw.equals("TIMEOUT")) {
-   * controlsPanel.add(new JLabel("Błąd połączenia."));
-   * } else {
-   * buildControls(raw, target);
-   * }
-   * controlsPanel.revalidate();
-   * controlsPanel.repaint();
-   * });
-   * }).start();
-   * }
-   */
-
-  private class Value {
-    String name;
-    boolean setter;
-    boolean getter;
-    String type;
-
-    public Value(String name, String type, boolean setter, boolean getter) {
-      this.name = name;
-      this.getter = getter;
-      this.setter = setter;
-      this.type = type;
-    }
-
-  }
-
   private void addValue(String code, ArrayList<Value> values) {
     String c = code;
     boolean getter = false;
@@ -224,8 +244,8 @@ public class UserUI extends JFrame {
       setter = true;
     }
 
-    String type = c.replaceAll(">$", "");
-    type = type.replaceAll("^.*<", "");
+    String type = c.replaceAll(">$","");
+    type = type.replaceAll("^.*<","");
 
     c = c.replaceAll("<.*>$", "");
 
@@ -241,56 +261,103 @@ public class UserUI extends JFrame {
     values.add(new Value(c, type, setter, getter));
   }
 
-  private void buildControls(String rawCodes, IP target) {
+  private JComboBox generateValuesCombo(String rawCodes) {
     String clean = rawCodes.replace("[", "").replace("]", "");
     String[] codes = clean.split(",");
 
-    // controlsPanel.add(new JLabel("<html><b>Urządzenie: " +
-    // target.getAddressString() + "</b></html>"));
-    // controlsPanel.add(Box.createVerticalStrut(10));
 
     ArrayList<Value> values = new ArrayList<>();
     for (String c : codes) {
       String code = c.trim();
-      if (code.isEmpty())
-        continue;
+      if (code.isEmpty()) continue;
+
+      addValue(code, values);
+    }
+    ArrayList<String> res = new ArrayList<>();
+
+    for (Value val : values) {
+      if (val.getter) {
+        res.add(val.name);
+      }
+    }
+
+    JComboBox box = new JComboBox(res.toArray(new String[]{}));
+    return box;
+  }
+
+  private JComponent generateCondValueField(String paramName, String rawCodes) {
+    String clean = rawCodes.replace("[", "").replace("]", "");
+    String[] codes = clean.split(",");
+
+
+    ArrayList<Value> values = new ArrayList<>();
+    for (String c : codes) {
+      String code = c.trim();
+      if (code.isEmpty()) continue;
 
       addValue(code, values);
     }
 
     for (Value val : values) {
-      JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-      JPanel row = new JPanel(new GridLayout(2, 2));
-      row.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY));
-      JLabel lbl = new JLabel(val.name);
-      lbl.setPreferredSize(new Dimension(100, 10));
-      lbl.setFont(new Font("SansSerif", Font.PLAIN, 10));
-
-      panel.add(lbl);
-
-      if (val.getter) {
-        JButton btn = new JButton("Get");
-        JLabel valLbl = new JLabel("?");
-        btn.addActionListener(e -> sendRequest(target, "GET_" + val.name, new String[] {}, valLbl));
-        row.add(btn);
-        row.add(valLbl);
-        btn.doClick();
+      if (val.getter && val.name.equals(paramName)) {
+        switch (val.type) {
+          case "INT":
+            return new JTextField(10);
+          case "FLOAT":
+            return new JTextField(10);
+          case "STRING":
+            return new JTextField(10);
+          case "COLOR":
+            JComponent comp = new JColorChooser();
+            comp.setSize(200, 200);
+            return comp;
+          default:
+            return new JTextField(10);
+        }
       }
-
-      if (val.setter) {
-        JTextField paramField = new JTextField(5);
-        JButton btn = new JButton("Set");
-        btn.addActionListener(e -> {
-          String txt = paramField.getText();
-          String[] params = txt.isEmpty() ? new String[] {} : txt.split(",");
-          sendRequest(target, "SET_" + val.name, params, null);
-        });
-        row.add(btn);
-        row.add(paramField);
-      }
-      panel.add(row);
-      // controlsPanel.add(panel);
     }
+
+    return new JTextField(10);
+  }
+
+  private JComboBox generateActionCodeCombo(String rawCodes) {
+    String clean = rawCodes.replace("[", "").replace("]", "");
+    String[] codes = clean.split(",");
+
+
+    ArrayList<Value> values = new ArrayList<>();
+    for (String c : codes) {
+      String code = c.trim();
+      if (code.isEmpty()) continue;
+
+      addValue(code, values);
+    }
+    ArrayList<String> res = new ArrayList<>();
+
+    for (Value val : values) {
+      if (val.setter) {
+        res.add(val.name);
+      }
+    }
+
+    JComboBox box = new JComboBox(res.toArray(new String[]{}));
+    return box;
+  }
+
+
+  private class Value {
+    String name;
+    boolean setter;
+    boolean getter;
+    String type;
+
+    public Value(String name, String type, boolean setter, boolean getter) {
+      this.name = name;
+      this.getter = getter;
+      this.setter = setter;
+      this.type = type;
+    }
+
   }
 
   private void sendRequest(IP target, String code, String[] params, JLabel outLabel) {
