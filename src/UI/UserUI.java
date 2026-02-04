@@ -13,15 +13,19 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Objects;
 
 public class UserUI extends JFrame {
   private final NetworkManager networkManager;
   private final UserDevice userDevice;
   private final ArrayList<String> discoveredIPs = new ArrayList<String>();
+  protected final GraphModel model = new GraphModel();
   protected GraphPanel graphPanel;
+
+  protected JComponent actionValue;
+  protected JComponent condValue;
 
   private IP shmanagerIP;
 
@@ -38,7 +42,7 @@ public class UserUI extends JFrame {
     setLayout(new BorderLayout());
 
     scanNetwork();
-    GraphModel model = generateGraph();
+    generateGraph();
 
     graphPanel = new GraphPanel(model);
 
@@ -55,30 +59,52 @@ public class UserUI extends JFrame {
         refreshGraph();
       }
       SwingUtilities.invokeLater(() -> {
-        JPanel dialogPanel = new JPanel(new BorderLayout());
-        JPanel conditionPanel = new JPanel(new GridLayout(2, 2));
-        //conditionPanel.setPreferredSize(new Dimension(600, 250));
-        JOptionPane pane = new JOptionPane(dialogPanel);
+        JPanel dialogPanel = new JPanel();
+        dialogPanel.setLayout(new BoxLayout(dialogPanel, BoxLayout.Y_AXIS));
+        JPanel conditionPanel = new JPanel(new FlowLayout());
+        JPanel actionPanel = new JPanel();
+        // conditionPanel.setPreferredSize(new Dimension(600, 250));
+        JOptionPane pane = new JOptionPane(dialogPanel,
+            JOptionPane.PLAIN_MESSAGE,
+            JOptionPane.OK_CANCEL_OPTION);
         JDialog dialog = pane.createDialog("Logic Config");
 
-
         NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
-                edge.from.deviceIP, "ADVERT", new String[]{});
+            edge.from.deviceIP, "ADVERT", new String[] {});
         r.send();
         String rawFrom = r.getResult();
 
-        // TODO: FINISH
+        String fromDevID = networkManager
+            .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
+                new String[] { edge.from.deviceIP.getAddressString() })
+            .send()
+            .getResult();
+        String toDevID = networkManager
+            .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
+                new String[] { edge.to.deviceIP.getAddressString() })
+            .send()
+            .getResult();
+
+        Font labelFont = new Font("Serif", Font.BOLD, 20);
+        JLabel ifLabel = new JLabel("If (" + fromDevID + ")");
+        ifLabel.setFont(labelFont);
+        conditionPanel.add(ifLabel);
+
+        JLabel thenLabel = new JLabel("Then (" + toDevID + ")");
+        thenLabel.setFont(labelFont);
+        actionPanel.add(thenLabel);
+
         JComboBox parameter = generateValuesCombo(rawFrom);
 
-        JComponent condValue = generateCondValueField((String) parameter.getSelectedItem(), rawFrom);
+        condValue = generateCondValueField((String) parameter.getSelectedItem(), rawFrom);
 
-        JComboBox condType = new JComboBox(new String[]{
-                "Equals",
-                "Not equals",
-                "Greater than",
-                "Less than",
-                "Greater than or equal to",
-                "Less than or equal to"
+        JComboBox condType = new JComboBox(new String[] {
+            "Equals",
+            "Not equals",
+            "Greater than",
+            "Less than",
+            "Greater than or equal to",
+            "Less than or equal to"
         });
 
         parameter.addActionListener(new ActionListener() {
@@ -87,9 +113,11 @@ public class UserUI extends JFrame {
             conditionPanel.removeAll();
 
             System.out.println("raw: " + rawFrom);
+            conditionPanel.add(ifLabel);
             conditionPanel.add(parameter);
             conditionPanel.add(condType);
-            conditionPanel.add(generateCondValueField((String) parameter.getSelectedItem(), rawFrom));
+            condValue = generateCondValueField((String) parameter.getSelectedItem(), rawFrom);
+            conditionPanel.add(condValue);
 
             conditionPanel.revalidate();
             conditionPanel.repaint();
@@ -99,28 +127,26 @@ public class UserUI extends JFrame {
           }
         });
 
-        JPanel top = new JPanel();
-        top.add(parameter);
-        top.add(condType);
-        conditionPanel.add(top);
+        conditionPanel.add(parameter);
+        conditionPanel.add(condType);
         conditionPanel.add(condValue);
 
-
         r = networkManager.createRequest(userDevice.getIP(),
-                edge.to.deviceIP, "ADVERT", new String[]{});
+            edge.to.deviceIP, "ADVERT", new String[] {});
         r.send();
         String rawTo = r.getResult();
 
-        JPanel actionPanel = new JPanel();
         JComboBox actionCode = generateActionCodeCombo(rawTo);
-        JComponent actionValue = generateCondValueField((String) actionCode.getSelectedItem(), rawTo);
+        actionValue = generateCondValueField((String) actionCode.getSelectedItem(), rawTo);
         actionCode.addActionListener(new ActionListener() {
           @Override
           public void actionPerformed(ActionEvent e) {
             actionPanel.removeAll();
 
+            actionPanel.add(thenLabel);
             actionPanel.add(actionCode);
-            actionPanel.add(generateCondValueField((String) actionCode.getSelectedItem(), rawTo));
+            actionValue = generateCondValueField((String) actionCode.getSelectedItem(), rawTo);
+            actionPanel.add(actionValue);
 
             actionPanel.revalidate();
             actionPanel.repaint();
@@ -130,13 +156,46 @@ public class UserUI extends JFrame {
           }
         });
 
-
         actionPanel.add(actionCode);
         actionPanel.add(actionValue);
 
-        dialogPanel.add(conditionPanel, BorderLayout.NORTH);
-        dialogPanel.add(actionPanel, BorderLayout.SOUTH);
+        dialogPanel.add(conditionPanel);
+        dialogPanel.add(actionPanel);
 
+        // Save changes when closing
+        pane.addPropertyChangeListener(evt -> {
+          if (evt.getPropertyName().equals(JOptionPane.VALUE_PROPERTY)
+              && evt.getNewValue() != null
+              && evt.getNewValue() != JOptionPane.UNINITIALIZED_VALUE) {
+
+            dialog.dispose();
+
+            if (evt.getNewValue().equals(JOptionPane.OK_OPTION)) {
+              // OK
+              networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_LOGIC", new String[] {
+                  edge.to.deviceIP.getAddressString(),
+                  "SET_" + (String) actionCode.getSelectedItem(),
+                  "[" + getInputValueString(actionValue) + "]",
+
+                  edge.from.deviceIP.getAddressString(),
+                  "GET_" + (String) parameter.getSelectedItem(),
+                  switch ((String) condType.getSelectedItem()) {
+                    case "Equals" -> "EQUAL";
+                    case "Not equals" -> "NOT_EQUALS";
+                    case "Greater than" -> "GREATER_THAN";
+                    case "Greater than or equal to" -> "GREATER_EQUAL";
+                    case "Less than" -> "LESS_THAN";
+                    case "Less than or equal to" -> "LESS_EQUAL";
+                    default -> "EQUAL";
+                  },
+                  getInputValueString(condValue),
+              }).send();
+
+              refreshGraph();
+            }
+            // Cancelled
+          }
+        });
 
         dialog.pack();
         dialog.setVisible(true);
@@ -162,17 +221,26 @@ public class UserUI extends JFrame {
     SwingUtilities.invokeLater(() -> {
       scanNetwork();
       System.out.println(discoveredIPs);
-      GraphModel m = generateGraph();
+      model.clearEdges();
+      generateGraph();
       remove(graphPanel);
       NodeConfigHandler nch = graphPanel.getNodeConfigHandler();
       EdgeConfigHandler ech = graphPanel.getEdgeConfigHandler();
-      graphPanel = new GraphPanel(m);
+      graphPanel = new GraphPanel(model);
       graphPanel.setNodeConfigHandler(nch);
       graphPanel.setEdgeConfigHandler(ech);
       add(graphPanel, BorderLayout.CENTER);
       revalidate();
       repaint();
     });
+  }
+
+  private String[] parseStringArray(String str) {
+    if (str.length() <= 2) {
+      return new String[] {};
+    }
+    String s = str.substring(1, str.length() - 1);
+    return s.split(",");
   }
 
   private void findSHManager() {
@@ -186,9 +254,8 @@ public class UserUI extends JFrame {
         "FINDSHMANAGER", new String[] {}).send().getResult());
   };
 
-  private GraphModel generateGraph() {
-    GraphModel model = new GraphModel();
-
+  private void generateGraph() {
+    HashMap<String, Node> nodes = new HashMap<>();
     for (int i = 0; i < discoveredIPs.size(); i++) {
       double angle = ((double) i / discoveredIPs.size()) * (3.14159 * 2);
 
@@ -200,10 +267,23 @@ public class UserUI extends JFrame {
           .getResult();
 
       Node node = new Node(x, y, devID, new IP(discoveredIPs.get(i)));
-      model.addNode(node);
+      node = model.addNode(node);
+      nodes.put(discoveredIPs.get(i), node);
     }
 
-    return model;
+    String logics = networkManager
+        .createRequest(userDevice.getIP(), shmanagerIP, "GET_LOGICS", new String[] {}).send()
+        .getResult();
+
+    String[] ips = parseStringArray(logics);
+
+    for (int i = 0; i < ips.length; i += 2) {
+      if (i >= ips.length - 1)
+        break;
+
+      model.addEdge(nodes.get(ips[i]), nodes.get(ips[i + 1]));
+    }
+    ;
   }
 
   private void scanNetwork() {
@@ -244,8 +324,8 @@ public class UserUI extends JFrame {
       setter = true;
     }
 
-    String type = c.replaceAll(">$","");
-    type = type.replaceAll("^.*<","");
+    String type = c.replaceAll(">$", "");
+    type = type.replaceAll("^.*<", "");
 
     c = c.replaceAll("<.*>$", "");
 
@@ -265,11 +345,11 @@ public class UserUI extends JFrame {
     String clean = rawCodes.replace("[", "").replace("]", "");
     String[] codes = clean.split(",");
 
-
     ArrayList<Value> values = new ArrayList<>();
     for (String c : codes) {
       String code = c.trim();
-      if (code.isEmpty()) continue;
+      if (code.isEmpty())
+        continue;
 
       addValue(code, values);
     }
@@ -281,19 +361,35 @@ public class UserUI extends JFrame {
       }
     }
 
-    JComboBox box = new JComboBox(res.toArray(new String[]{}));
+    JComboBox box = new JComboBox(res.toArray(new String[] {}));
     return box;
+  }
+
+  private String getInputValueString(JComponent input) {
+    if (input instanceof JColorChooser)
+      return String.format("#%06X", (0xFFFFFF & ((JColorChooser) input).getColor().getRGB()));
+    if (input instanceof JTextField) {
+      return ((JTextField) input).getText();
+    }
+    if (input instanceof JSlider) {
+      return String.valueOf(((JSlider) input).getValue() / 100.0);
+    }
+    if (input instanceof JCheckBox) {
+      return ((JCheckBox) input).isSelected() ? "true" : "false";
+    }
+
+    return "MISSING TYPE!!!";
   }
 
   private JComponent generateCondValueField(String paramName, String rawCodes) {
     String clean = rawCodes.replace("[", "").replace("]", "");
     String[] codes = clean.split(",");
 
-
     ArrayList<Value> values = new ArrayList<>();
     for (String c : codes) {
       String code = c.trim();
-      if (code.isEmpty()) continue;
+      if (code.isEmpty())
+        continue;
 
       addValue(code, values);
     }
@@ -311,6 +407,13 @@ public class UserUI extends JFrame {
             JComponent comp = new JColorChooser();
             comp.setSize(200, 200);
             return comp;
+          case "RANGE":
+            // Range from 0 to 1
+            JSlider slider = new JSlider();
+            return slider;
+          case "BOOL":
+            JCheckBox checkBox = new JCheckBox();
+            return checkBox;
           default:
             return new JTextField(10);
         }
@@ -324,11 +427,11 @@ public class UserUI extends JFrame {
     String clean = rawCodes.replace("[", "").replace("]", "");
     String[] codes = clean.split(",");
 
-
     ArrayList<Value> values = new ArrayList<>();
     for (String c : codes) {
       String code = c.trim();
-      if (code.isEmpty()) continue;
+      if (code.isEmpty())
+        continue;
 
       addValue(code, values);
     }
@@ -340,10 +443,9 @@ public class UserUI extends JFrame {
       }
     }
 
-    JComboBox box = new JComboBox(res.toArray(new String[]{}));
+    JComboBox box = new JComboBox(res.toArray(new String[] {}));
     return box;
   }
-
 
   private class Value {
     String name;
@@ -358,19 +460,6 @@ public class UserUI extends JFrame {
       this.type = type;
     }
 
-  }
-
-  private void sendRequest(IP target, String code, String[] params, JLabel outLabel) {
-    new Thread(() -> {
-      log("-> " + code + " to " + target.getAddressString());
-      NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(), target, code, params);
-      r.send();
-      String res = r.getResult();
-      log("<- " + res);
-      if (outLabel != null) {
-        SwingUtilities.invokeLater(() -> outLabel.setText(res));
-      }
-    }).start();
   }
 
   private void log(String msg) {
