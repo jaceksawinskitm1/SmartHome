@@ -189,6 +189,9 @@ public class UserUI extends JFrame {
 
         JDialog dialog = pane.createDialog("Logic Config");
         JPanel dialogPanel = createLogicConfigPanel(edge, pane, dialog);
+        if (dialogPanel == null) {
+          return;
+        }
 
         pane.setMessage(dialogPanel);
 
@@ -284,7 +287,10 @@ public class UserUI extends JFrame {
     // thenLabel.setFont(labelFont);
     actionPanel.add(thenLabel);
 
-    condition = generateCondition(rawFrom, edge.logicData.conditionCode, edge.logicData.conditionValue);
+    condition = generateCondition(rawFrom, edge.logicData.conditionCode, edge.logicData.conditionValue, false, fromDevID);
+    if (condition == null) {
+      return null;
+    }
 
     JComboBox condType = new JComboBox(condition.availableTypes);
 
@@ -345,7 +351,10 @@ public class UserUI extends JFrame {
     r.send();
     String rawTo = r.getResult();
 
-    action = generateCondition(rawTo, edge.logicData.actionCode, edge.logicData.actionParams);
+    action = generateCondition(rawTo, edge.logicData.actionCode, edge.logicData.actionParams, true, toDevID);
+    if (action == null) {
+      return null;
+    }
 
     action.code.addActionListener(new ActionListener() {
       @Override
@@ -559,11 +568,14 @@ public class UserUI extends JFrame {
     JComponent value;
   }
 
-  private ConditionStructure generateCondition(String rawCodes, String code, String defaultValue) {
+  private ConditionStructure generateCondition(String rawCodes, String code, String defaultValue, boolean setter, String devID) {
     if (code != null)
       code = code.toUpperCase();
     ConditionStructure struct = new ConditionStructure();
-    struct.code = generateValuesCombo(rawCodes, code);
+    struct.code = generateValuesCombo(rawCodes, code, setter, devID);
+    if (struct.code == null) {
+      return null;
+    }
 
     ArrayList<String> availableConditionTypes = new ArrayList<String>(Arrays.asList(new String[] {
         "Equals",
@@ -577,6 +589,7 @@ public class UserUI extends JFrame {
     struct.value = generateCondValueField(((String) struct.code.getSelectedItem()).toUpperCase(), rawCodes,
         defaultValue,
         availableConditionTypes);
+    struct.availableTypes = availableConditionTypes.toArray(new String[] {});
     return struct;
   }
 
@@ -596,7 +609,7 @@ public class UserUI extends JFrame {
     condition.availableTypes = availableConditionTypes.toArray(new String[] {});
   }
 
-  private JComboBox generateValuesCombo(String rawCodes, String defaultValue) {
+  private JComboBox generateValuesCombo(String rawCodes, String defaultValue, boolean setter, String devID) {
     String clean = rawCodes.replace("[", "").replace("]", "");
     String[] codes = clean.split(",");
 
@@ -611,9 +624,17 @@ public class UserUI extends JFrame {
     ArrayList<String> res = new ArrayList<>();
 
     for (Value val : values) {
-      if (val.getter) {
+      if (setter ? val.setter : val.getter) {
         res.add(capitalizeString(val.name));
       }
+    }
+    if (res.size() == 0) {
+      if (setter) {
+        JOptionPane.showMessageDialog(null, "Device " + devID + " does not have any parameters that can be changed by a logic.\nUse a different device.");
+      } else {
+        JOptionPane.showMessageDialog(null, "Device " + devID + " does not have any parameters that can be used as the condition for a logic.\nUse a different device.");
+      }
+      return null;
     }
 
     JComboBox box = new JComboBox(res.toArray(new String[] {}));
@@ -668,6 +689,7 @@ public class UserUI extends JFrame {
             return tf;
           case "FLOAT":
             tf = new JFormattedTextField(NumberFormat.getNumberInstance());
+            tf.setColumns(10);
             if (defaultValue != null)
               tf.setValue(Float.parseFloat(defaultValue));
             return tf;
