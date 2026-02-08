@@ -241,11 +241,11 @@ public class SmartHomeLauncher {
 
                 }
                 case LightDetector ld -> {
-                    JComboBox<LightDetector.LightState> cb = new JComboBox<>(LightDetector.LightState.values());
-                    cb.setSelectedItem(ld.getState());
-                    cb.addActionListener(e -> ld.setState((LightDetector.LightState) cb.getSelectedItem()));
+                    JCheckBox cb = new JCheckBox();
+                    cb.setSelected(ld.getState());
+                    cb.addActionListener(e -> ld.setState(cb.isSelected()));
 
-                    JLabel icon = new JLabel(ld.getState() == LightDetector.LightState.DAY ? "☀️" : "🌙");
+                    JLabel icon = new JLabel((!ld.getState()) ? "☀️" : "🌙");
                     icon.setFont(new Font("SansSerif", Font.PLAIN, 40));
                     icon.setAlignmentX(Component.CENTER_ALIGNMENT);
 

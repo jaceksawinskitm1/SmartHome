@@ -10,9 +10,6 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import com.sun.net.httpserver.Authenticator.Success;
-import com.sun.source.tree.NewClassTree;
-
 public class SHManager extends NetworkDevice {
 
   public static class DeviceLogic {
@@ -22,13 +19,16 @@ public class SHManager extends NetworkDevice {
     private String successCode;
     private String[] successParams;
     private final SHManager manager;
+    private int priority;
 
-    public DeviceLogic(IP device, String code, String[] params, SHManager manager, Comparator comparator) {
+    public DeviceLogic(IP device, String code, String[] params, SHManager manager, Comparator comparator,
+        int priority) {
       this.comparator = comparator;
       this.devB = device;
       this.devA = comparator.devA;
       this.successCode = code;
       this.successParams = params;
+      this.priority = priority;
 
       this.manager = manager;
     }
@@ -139,7 +139,6 @@ public class SHManager extends NetworkDevice {
       if (!this.codeA.equals(other.codeA))
         return false;
 
-      System.out.println("this: " + this.condition + ", other: " + other.condition);
       if (!this.condition.name().equals(other.condition.name()))
         return false;
 
@@ -193,8 +192,8 @@ public class SHManager extends NetworkDevice {
     return new Comparator(deviceA.getIP(), codeA, condition, constB, this);
   }
 
-  public void registerLogic(IP device, String code, String[] params, Comparator comparator) {
-    DeviceLogic logic = new DeviceLogic(device, code, params, this, comparator);
+  public void registerLogic(IP device, String code, String[] params, Comparator comparator, String priority) {
+    DeviceLogic logic = new DeviceLogic(device, code, params, this, comparator, Integer.valueOf(priority));
 
     logics.add(logic);
   }
@@ -205,19 +204,15 @@ public class SHManager extends NetworkDevice {
       if (!device.equals(logic.devB))
         found = false;
 
-      System.out.println("1: " + found);
       if (!code.equals(logic.successCode))
         found = false;
 
-      System.out.println("2: " + found);
       if (!Arrays.equals(params, logic.successParams))
         found = false;
 
-      System.out.println("3: " + found);
       if (!comparator.equals(logic.comparator))
         found = false;
 
-      System.out.println("4: " + found);
       if (found) {
         logics.remove(logic);
         return;
@@ -235,7 +230,7 @@ public class SHManager extends NetworkDevice {
     }
     if (!str.startsWith("[") || !str.endsWith("]")) {
       // Not a list
-      return new String[] {str};
+      return new String[] { str };
     }
     String s = str.substring(1, str.length() - 1);
     return s.split(",");
@@ -288,11 +283,11 @@ public class SHManager extends NetworkDevice {
 
     registerNetworkCode("ADD_LOGIC", "NULL", (IP[] ips, String[] params) -> {
       // params: action_dev_ip, action_code, action_params, cond_dev_ip, cond_code,
-      // cond_type, cond_val
+      // cond_type, cond_val, priority
       System.out.println("Adding logic: params: " + Arrays.toString(params));
 
       // Remove old duplicates (if exist)
-deregisterLogic(
+      deregisterLogic(
           new IP(params[0]),
           params[1],
           parseStringArray(params[2]),
@@ -304,7 +299,9 @@ deregisterLogic(
           parseStringArray(params[2]),
           // Conditions
           // TODO: Add multiple
-          createComparatorStringBased(params[3], params[4], params[5], params[6]));
+          createComparatorStringBased(params[3], params[4], params[5], params[6]),
+          params[7] 
+      );
 
       return "";
     });
@@ -344,6 +341,7 @@ deregisterLogic(
         res += logic.comparator.codeA + ",";
         res += logic.comparator.condition.name() + ",";
         res += logic.comparator.paramB + ",";
+        res += logic.priority + ",";
       }
       res = res.substring(0, res.length() - 1) + "]";
 
@@ -361,6 +359,10 @@ deregisterLogic(
     }
 
     // Try every logic connection
+    logics.sort((a, b) -> {
+      return Integer.compare(a.priority, b.priority);
+    });
+
     for (DeviceLogic logic : logics) {
       logic.Try();
     }

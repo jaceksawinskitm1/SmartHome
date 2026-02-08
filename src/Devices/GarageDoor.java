@@ -15,10 +15,9 @@ public class GarageDoor extends SHDevice {
     public GarageDoor() {
         // Rejestracja kodów sieciowych
         registerNetworkCode("GET_POSITION", "RANGE", () -> String.valueOf(getPosition()));  // Zwraca pozycję bramy
-        registerNetworkCode("SET_POSITION", "RANGE", (String[] params) -> this.setPosition(Integer.parseInt(params[0])));  // Ustawia pozycję bramy
+        registerNetworkCode("SET_POSITION", "RANGE", (String[] params) -> this.setPosition(Double.parseDouble(params[0])));  // Ustawia pozycję bramy
 
         registerNetworkCode("GET_STATE", "STRING", () -> state.name());  // Zwraca stan bramy (OPEN, CLOSED, PARTIALLY_OPENED)
-        registerNetworkCode("SET_STATE", "STRING", (String[] params) -> this.setState(DoorState.valueOf(params[0])));  // Ustawia stan bramy
     }
 
     // Getter pozycji bramy
@@ -38,11 +37,11 @@ public class GarageDoor extends SHDevice {
 
         // Ustawienie stanu na podstawie pozycji
         if (position == 0) {
-            state = DoorState.OPEN;  // Brama otwarta
+            this.state = DoorState.OPEN;  // Brama otwarta
         } else if (position == 1.0) {
-            state = DoorState.CLOSED;  // Brama zamknięta
+            this.state = DoorState.CLOSED;  // Brama zamknięta
         } else {
-            state = DoorState.PARTIALLY_OPENED;  // Brama częściowo otwarta
+            this.state = DoorState.PARTIALLY_OPENED;  // Brama częściowo otwarta
         }
     }
 
@@ -54,19 +53,5 @@ public class GarageDoor extends SHDevice {
     // Setter stanu bramy
     public void setState(DoorState state) {
         this.state = state;
-
-        // Ustawienie pozycji na podstawie stanu
-        switch (state) {
-            case OPEN:
-                setPosition(0);  // Ustawia bramę na otwartą
-                break;
-            case CLOSED:
-                setPosition(1.0);  // Ustawia bramę na zamkniętą
-                break;
-            case PARTIALLY_OPENED:
-                // Można ustawić dowolną pozycję pomiędzy 1 a 99, np. na 50
-                setPosition(0.5);
-                break;
-        }
     }
 }

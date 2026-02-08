@@ -12,6 +12,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -34,21 +35,37 @@ public class UserUI extends JFrame {
     parent.removeAll();
     valueMap.clear();
     for (Value val : values) {
-      JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-      JLabel lbl = new JLabel(capitalizeString(val.name) + ": ");
+      if (val.getter) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JLabel lbl = new JLabel(capitalizeString(val.name) + ": ");
+        panel.add(lbl);
+        String currentValue = networkManager
+            .createRequest(userDevice.getIP(), deviceIP, "GET_" + val.name, new String[] {}).send()
+            .getResult();
 
-      panel.add(lbl);
+        JComponent valueComp = generateCondValueField(val.name, rawCodes, currentValue, new ArrayList<>());
 
-      String currentValue = networkManager
-          .createRequest(userDevice.getIP(), deviceIP, "GET_" + val.name, new String[] {}).send()
-          .getResult();
+        if (!val.setter) {
+          // Readonly value
+          valueComp.setEnabled(false);
+        }
 
-      JComponent valueComp = generateCondValueField(val.name, rawCodes, currentValue, new ArrayList<>());
-      valueMap.put(val, valueComp);
+        valueMap.put(val, valueComp);
+        panel.add(valueComp);
 
-      panel.add(valueComp);
+        parent.add(panel);
+      } else if (!val.setter) {
+        // No getter and setter -> action
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton valueComp = new JButton(capitalizeString(val.name));
+        valueComp.addActionListener(e -> {
+          networkManager.createRequest(userDevice.getIP(), deviceIP, val.name, new String[] { }).send();
+        });
 
-      parent.add(panel);
+        panel.add(valueComp);
+
+        parent.add(panel);
+      }
     }
     parent.revalidate();
     parent.repaint();
@@ -89,7 +106,7 @@ public class UserUI extends JFrame {
           .send()
           .getResult();
 
-      //configPanel.add(Box.createVerticalStrut(10));
+      // configPanel.add(Box.createVerticalStrut(10));
 
       ArrayList<Value> values = new ArrayList<>();
       for (String c : codes) {
@@ -198,7 +215,6 @@ public class UserUI extends JFrame {
   protected void refreshGraph() {
     SwingUtilities.invokeLater(() -> {
       scanNetwork();
-      System.out.println(discoveredIPs);
       model.clearEdges();
       generateGraph();
       remove(graphPanel);
@@ -259,13 +275,13 @@ public class UserUI extends JFrame {
         .send()
         .getResult();
 
-    //Font labelFont = new Font("Serif", Font.BOLD, 20);
+    // Font labelFont = new Font("Serif", Font.BOLD, 20);
     JLabel ifLabel = new JLabel("If (" + fromDevID + "): ");
-    //ifLabel.setFont(labelFont);
+    // ifLabel.setFont(labelFont);
     conditionPanel.add(ifLabel);
 
     JLabel thenLabel = new JLabel("Then (" + toDevID + "): ");
-    //thenLabel.setFont(labelFont);
+    // thenLabel.setFont(labelFont);
     actionPanel.add(thenLabel);
 
     condition = generateCondition(rawFrom, edge.logicData.conditionCode, edge.logicData.conditionValue);
@@ -329,7 +345,6 @@ public class UserUI extends JFrame {
     r.send();
     String rawTo = r.getResult();
 
-    System.out.println("ActionParams: " + edge.logicData.actionParams);
     action = generateCondition(rawTo, edge.logicData.actionCode, edge.logicData.actionParams);
 
     action.code.addActionListener(new ActionListener() {
@@ -356,6 +371,20 @@ public class UserUI extends JFrame {
     dialogPanel.add(conditionPanel);
     dialogPanel.add(actionPanel);
 
+    JPanel prioPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    JLabel prioLabel = new JLabel("Priority: ");
+    JFormattedTextField prioVal = new JFormattedTextField(NumberFormat.getIntegerInstance());
+    prioVal.setColumns(3);
+    if (edge.logicData.priority != null)
+      prioVal.setValue(Integer.valueOf(edge.logicData.priority));
+    else
+      prioVal.setValue(0);
+
+    prioPanel.add(prioLabel);
+    prioPanel.add(prioVal);
+
+    dialogPanel.add(prioPanel);
+
     // Save changes when closing
     pane.addPropertyChangeListener(evt -> {
       if (evt.getPropertyName().equals(JOptionPane.VALUE_PROPERTY)
@@ -365,7 +394,6 @@ public class UserUI extends JFrame {
         if (evt.getNewValue().equals(pane.getOptions()[1] /* OK button */)) {
           // OK
           if (!edge.logicData.isEmpty()) {
-            System.out.println("deleting");
             networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
                 edge.to.deviceIP.getAddressString(),
                 "SET_" + ((String) edge.logicData.actionCode).toUpperCase(),
@@ -395,6 +423,7 @@ public class UserUI extends JFrame {
                 default -> "EQUAL";
               },
               getInputValueString(condition.value),
+              String.valueOf(prioVal.getValue())
           }).send();
 
           refreshGraph();
@@ -450,10 +479,9 @@ public class UserUI extends JFrame {
 
     // The logics stored one after the other in 6 element chunks
     String[] combined = parseStringArray(logics);
-    System.out.println("Logics: " + logics);
 
-    for (int i = 0; i < combined.length; i += 7) {
-      if (i >= combined.length - 6)
+    for (int i = 0; i < combined.length; i += 8) {
+      if (i >= combined.length - 7)
         break;
 
       String ipA = combined[i + 3];
@@ -467,6 +495,7 @@ public class UserUI extends JFrame {
       edge.logicData.conditionCode = capitalizeString(combined[i + 4].replaceFirst("^GET_", ""));
       edge.logicData.conditionType = combined[i + 5];
       edge.logicData.conditionValue = combined[i + 6];
+      edge.logicData.priority = combined[i + 7];
     }
   }
 
@@ -482,7 +511,6 @@ public class UserUI extends JFrame {
       if (targetIP.trim().length() == 0) {
         continue;
       }
-      System.out.println("ip: " + targetIP);
 
       NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(), new IP(targetIP), "ADVERT",
           new String[] {});
@@ -549,8 +577,6 @@ public class UserUI extends JFrame {
     struct.value = generateCondValueField(((String) struct.code.getSelectedItem()).toUpperCase(), rawCodes,
         defaultValue,
         availableConditionTypes);
-    System.out.println("Available: " + availableConditionTypes.toString());
-    struct.availableTypes = availableConditionTypes.toArray(new String[] {});
     return struct;
   }
 
@@ -567,7 +593,6 @@ public class UserUI extends JFrame {
     condition.value = generateCondValueField(((String) condition.code.getSelectedItem()).toUpperCase(), rawCodes,
         null,
         availableConditionTypes);
-    System.out.println("Available: " + availableConditionTypes.toString());
     condition.availableTypes = availableConditionTypes.toArray(new String[] {});
   }
 
@@ -636,24 +661,25 @@ public class UserUI extends JFrame {
       if (val.getter && val.name.equals(paramName)) {
         switch (val.type) {
           case "INT":
-            JTextField tf = new JTextField(10);
+            JFormattedTextField tf = new JFormattedTextField(NumberFormat.getIntegerInstance());
+            tf.setColumns(10);
             if (defaultValue != null)
-              tf.setText(defaultValue);
+              tf.setValue(Integer.parseInt(defaultValue));
             return tf;
           case "FLOAT":
-            tf = new JTextField(10);
+            tf = new JFormattedTextField(NumberFormat.getNumberInstance());
             if (defaultValue != null)
-              tf.setText(defaultValue);
+              tf.setValue(Float.parseFloat(defaultValue));
             return tf;
           case "STRING":
-            tf = new JTextField(10);
+            JTextField field = new JTextField(10);
             if (defaultValue != null)
-              tf.setText(defaultValue);
+              field.setText(defaultValue);
             comparisonTypes.remove("Greater than");
             comparisonTypes.remove("Greater than or equal to");
             comparisonTypes.remove("Less than");
             comparisonTypes.remove("Less than or equal to");
-            return tf;
+            return field;
           case "COLOR":
             JButton colorButton = new JButton("#FFFFFF");
 
@@ -690,7 +716,6 @@ public class UserUI extends JFrame {
             return slider;
           case "BOOL":
             JCheckBox checkBox = new JCheckBox();
-            System.out.println("defVal: " + defaultValue);
             if (defaultValue != null)
               checkBox.setSelected(defaultValue.equals("true"));
             comparisonTypes.remove("Greater than");
@@ -699,10 +724,10 @@ public class UserUI extends JFrame {
             comparisonTypes.remove("Less than or equal to");
             return checkBox;
           default:
-            tf = new JTextField(10);
+            field = new JTextField(10);
             if (defaultValue != null)
-              tf.setText(defaultValue);
-            return tf;
+              field.setText(defaultValue);
+            return field;
         }
       }
     }

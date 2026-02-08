@@ -10,9 +10,10 @@ public class Edge {
     public String conditionCode;
     public String conditionType;
     public String conditionValue;
+    public String priority;
 
     public boolean isEmpty() {
-      return actionCode == null || actionParams == null || conditionCode == null || conditionType == null || conditionValue == null; 
+      return actionCode == null || actionParams == null || conditionCode == null || conditionType == null || conditionValue == null || priority == null; 
     }
   }
 

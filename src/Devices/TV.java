@@ -12,7 +12,7 @@ public class TV extends SHDevice {
         registerNetworkCode("SET_STATUS", "BOOL", (String[] params) -> this.setStatus(params[0].equals("true")));  // Ustawia stan (włączony/wyłączony)
 
         registerNetworkCode("GET_VOLUME", "RANGE", () -> String.valueOf(volume));  // Zwraca poziom głośności
-        registerNetworkCode("SET_VOLUME", "RANGE", (String[] params) -> this.setVolume(Integer.parseInt(params[0])));  // Ustawia poziom głośności
+        registerNetworkCode("SET_VOLUME", "RANGE", (String[] params) -> this.setVolume(Double.parseDouble(params[0])));  // Ustawia poziom głośności
 
         registerNetworkCode("GET_CHANNEL", "INT", () -> String.valueOf(channel));  // Zwraca numer kanału
         registerNetworkCode("SET_CHANNEL", "INT", (String[] params) -> this.setChannel(Integer.parseInt(params[0])));  // Ustawia numer kanału

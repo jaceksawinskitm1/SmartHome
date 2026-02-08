@@ -1,28 +1,22 @@
 package Devices;
 
 public class LightDetector extends SHDevice {
-    private LightState state = LightState.NIGHT;  // Początkowy stan (noc)
-
-    // Enum stanu wykrywacza światła
-    public enum LightState {
-        DAY,   // Dzień
-        NIGHT  // Noc
-    }
+    private boolean night = true;  // Początkowy stan (noc)
 
     // Konstruktor klasy LightDetector
     public LightDetector() {
         // Rejestracja kodów sieciowych
-        registerNetworkCode("GET_STATE", "STRING", () -> state.name());  // Zwraca stan (DAY lub NIGHT)
-        registerNetworkCode("SET_STATE", "STRING", (String[] params) -> this.setState(LightState.valueOf(params[0])));  // Ustawia stan
+        registerNetworkCode("GET_NIGHT", "BOOL", () -> String.valueOf(night));  // Zwraca stan (DAY lub NIGHT)
+        registerNetworkCode("SET_NIGHT", "BOOL", (String[] params) -> this.setState(Boolean.valueOf(params[0])));  // Ustawia stan
     }
 
     // Getter stanu wykrywacza
-    public LightState getState() {
-        return state;
+    public boolean getState() {
+        return night;
     }
 
     // Setter stanu wykrywacza
-    public void setState(LightState state) {
-        this.state = state;
+    public void setState(Boolean night) {
+        this.night = night;
     }
 }
