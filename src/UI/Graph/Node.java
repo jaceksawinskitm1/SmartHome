@@ -65,4 +65,12 @@ public class Node {
     x += dx;
     y += dy;
   }
+
+  public void setLabel(String text) {
+    this.label = text;
+  }
+
+  public String getLabel() {
+    return this.label;
+  }
 }

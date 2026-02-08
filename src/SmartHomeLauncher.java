@@ -100,19 +100,18 @@ public class SmartHomeLauncher {
                     "Light", "Thermometer", "Blind", "Heater", "AirConditioner", "AudioDevice",
                     "CCTV", "TV", "LightDetector", "GarageDoor", "CoffeeMachine"
             });
-            JTextField idField = new JTextField("dev_01", 8);
             JButton addButton = new JButton("Dodaj");
+            JCheckBox autoConnect = new JCheckBox("Łączenie automatyczne");
+            autoConnect.setSelected(true);
 
             addButton.addActionListener(e -> {
                 String type = (String) typeCombo.getSelectedItem();
-                String id = idField.getText();
-                createAndRegisterDevice(type, id);
+                createAndRegisterDevice(type, autoConnect.isSelected());
             });
 
-            bottomPanel.add(new JLabel("ID:"));
-            bottomPanel.add(idField);
             bottomPanel.add(typeCombo);
             bottomPanel.add(addButton);
+            bottomPanel.add(autoConnect);
             add(bottomPanel, BorderLayout.SOUTH);
 
             // Timer do odświeżania UI (podgląd stanu na żywo)
@@ -122,9 +121,7 @@ public class SmartHomeLauncher {
             }).start();
         }
 
-        private void createAndRegisterDevice(String type, String id) {
-            if (deviceMap.containsKey(id)) return;
-
+        private void createAndRegisterDevice(String type, boolean autoConnect) {
             SHDevice newDevice = switch (type) {
                 case "Light" -> new Light();
                 case "Thermometer" -> new Thermometer();
@@ -141,9 +138,11 @@ public class SmartHomeLauncher {
             };
 
             if (newDevice != null) {
-                shManager.registerDevice(id, newDevice);
-                deviceMap.put(id, newDevice);
-                deviceListModel.addElement(id);
+                //shManager.registerDevice(id, newDevice);
+                newDevice.setAutoConnect(autoConnect);
+                newDevice.setNetworkManager(networkManager);
+                deviceMap.put(newDevice.getIP().getAddressString(), newDevice);
+                deviceListModel.addElement(newDevice.getIP().getAddressString());
             }
         }
 

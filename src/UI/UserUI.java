@@ -59,7 +59,7 @@ public class UserUI extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton valueComp = new JButton(capitalizeString(val.name));
         valueComp.addActionListener(e -> {
-          networkManager.createRequest(userDevice.getIP(), deviceIP, val.name, new String[] { }).send();
+          networkManager.createRequest(userDevice.getIP(), deviceIP, val.name, new String[] {}).send();
         });
 
         panel.add(valueComp);
@@ -124,6 +124,23 @@ public class UserUI extends JFrame {
       refreshValues(values, rawCodes, node.deviceIP, valuesPanel, valueMap);
       configPanel.add(valuesPanel);
 
+      JPanel renamePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+      JButton renameButton = new JButton("Rename device");
+      renameButton.addActionListener(e -> {
+        String newID = JOptionPane.showInputDialog(null, "Input the new device ID/Name");
+
+        if (newID != null && !newID.isBlank()) {
+          networkManager.createRequest(userDevice.getIP(), shmanagerIP, "RENAME_DEVICE", new String[] {
+              devID, newID
+          }).send();
+
+          refreshGraph();
+          JOptionPane.getRootFrame().dispose();
+        }
+      });
+      renamePanel.add(renameButton);
+      configPanel.add(renamePanel);
+
       JButton refreshButton = new JButton("Refresh");
       refreshButton.addActionListener(e -> {
         refreshValues(values, rawCodes, node.deviceIP, valuesPanel, valueMap);
@@ -159,9 +176,8 @@ public class UserUI extends JFrame {
           JOptionPane.DEFAULT_OPTION,
           JOptionPane.INFORMATION_MESSAGE,
           null,
-          options, // The button objects
-          options[0] // Default selection
-      );
+          options,
+          options[0]);
     });
 
     graphPanel.setEdgeConfigHandler((edge, isNew) -> {
@@ -245,13 +261,7 @@ public class UserUI extends JFrame {
   }
 
   private void findSHManager() {
-    shmanagerIP = new IP(networkManager.createRequest(userDevice.getIP(), new IP(
-        new byte[] {
-            userDevice.getIP().getAddress()[0],
-            userDevice.getIP().getAddress()[1],
-            userDevice.getIP().getAddress()[2],
-            (byte) 255
-        }),
+    shmanagerIP = new IP(networkManager.createRequest(userDevice.getIP(), networkManager.getBroadcastAddress(),
         "FINDSHMANAGER", new String[] {}).send().getResult());
   };
 
@@ -287,7 +297,8 @@ public class UserUI extends JFrame {
     // thenLabel.setFont(labelFont);
     actionPanel.add(thenLabel);
 
-    condition = generateCondition(rawFrom, edge.logicData.conditionCode, edge.logicData.conditionValue, false, fromDevID);
+    condition = generateCondition(rawFrom, edge.logicData.conditionCode, edge.logicData.conditionValue, false,
+        fromDevID);
     if (condition == null) {
       return null;
     }
@@ -568,7 +579,8 @@ public class UserUI extends JFrame {
     JComponent value;
   }
 
-  private ConditionStructure generateCondition(String rawCodes, String code, String defaultValue, boolean setter, String devID) {
+  private ConditionStructure generateCondition(String rawCodes, String code, String defaultValue, boolean setter,
+      String devID) {
     if (code != null)
       code = code.toUpperCase();
     ConditionStructure struct = new ConditionStructure();
@@ -630,9 +642,11 @@ public class UserUI extends JFrame {
     }
     if (res.size() == 0) {
       if (setter) {
-        JOptionPane.showMessageDialog(null, "Device " + devID + " does not have any parameters that can be changed by a logic.\nUse a different device.");
+        JOptionPane.showMessageDialog(null, "Device " + devID
+            + " does not have any parameters that can be changed by a logic.\nUse a different device.");
       } else {
-        JOptionPane.showMessageDialog(null, "Device " + devID + " does not have any parameters that can be used as the condition for a logic.\nUse a different device.");
+        JOptionPane.showMessageDialog(null, "Device " + devID
+            + " does not have any parameters that can be used as the condition for a logic.\nUse a different device.");
       }
       return null;
     }

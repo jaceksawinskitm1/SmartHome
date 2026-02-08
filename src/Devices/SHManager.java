@@ -153,7 +153,7 @@ public class SHManager extends NetworkDevice {
 
   private final NetworkManager networkManager;
 
-  private final HashMap<String, SHDevice> devices = new HashMap<>();
+  private final HashMap<String, IP> devices = new HashMap<>();
 
   private final ArrayList<DeviceLogic> logics = new ArrayList<>();
 
@@ -161,11 +161,21 @@ public class SHManager extends NetworkDevice {
     return networkManager;
   }
 
-  public void registerDevice(String id, SHDevice dev) {
+  public void renameDevice(String oldID, String newID) {
+    if (!devices.containsKey(oldID))
+      return;
+
+    IP device = devices.get(oldID);
+    devices.remove(oldID);
+    devices.put(newID, device);
+  }
+
+  public void registerDevice(String id, IP dev) {
     if (devices.containsValue(dev))
       return;
 
-    dev.leaseIP(this.getNetworkManager());
+    //dev.leaseIP(this.getNetworkManager());
+    networkManager.createRequest(this.getIP(), dev, "_CONNECT_MANAGER", new String[] {}).send();
     devices.put(id, dev);
   }
 
@@ -175,10 +185,9 @@ public class SHManager extends NetworkDevice {
 
   public String getDeviceId(IP ip) {
     for (String devId : devices.keySet()) {
-      if (devices.get(devId).getIP().equals(ip))
+      if (devices.get(devId).equals(ip))
         return devId;
     }
-    ;
     return "";
   };
 
@@ -267,8 +276,8 @@ public class SHManager extends NetworkDevice {
       }
 
       String res = "[";
-      for (SHDevice dev : devices.values()) {
-        res += dev.getIP().getAddressString() + ",";
+      for (IP dev : devices.values()) {
+        res += dev.getAddressString() + ",";
       }
       res = res.substring(0, res.length() - 1) + "]";
 
@@ -347,16 +356,21 @@ public class SHManager extends NetworkDevice {
 
       return res;
     });
+
+
+    registerNetworkCode("ADD_DEVICE", "NULL", (IP[] ips, String[] params) -> {
+      // params: device_ip, device_id
+      registerDevice(params[1], new IP(params[0]));
+    });
+
+    registerNetworkCode("RENAME_DEVICE", "NULL", (IP[] ips, String[] params) -> {
+      // params: device_id_old, device_id_new
+      renameDevice(params[0], params[1]);
+    });
   }
 
   private void loop() {
     // Runs every second
-
-    // Depracated, use logics instead
-    for (SHDevice dev : devices.values()) {
-      dev.refresh();
-      dev.events();
-    }
 
     // Try every logic connection
     logics.sort((a, b) -> {

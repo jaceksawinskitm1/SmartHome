@@ -148,11 +148,20 @@ public class NetworkManager {
       return ip;
     }
 
-    System.out.println(Arrays.toString(leases.keySet().toArray(new IP[0])));
     throw new NetworkException("IP Lease failed; no free addresses left in pool");
   }
 
   public void freeIP(IP ip) {
     leases.remove(ip);
+  }
+
+  public IP getBroadcastAddress() {
+    return new IP(
+        new byte[] {
+            poolStart.getAddress()[0],
+            poolStart.getAddress()[1],
+            poolStart.getAddress()[2],
+            (byte) 255
+        });
   }
 }

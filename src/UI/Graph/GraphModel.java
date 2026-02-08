@@ -12,6 +12,7 @@ public class GraphModel {
   public Node addNode(Node node) {
     for (Node n : nodes) {
       if (n.deviceIP.equals(node.deviceIP)) {
+        n.setLabel(node.getLabel());
         return n;
       }
     }
