@@ -4,6 +4,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.AffineTransform;
+import java.util.ArrayList;
 
 public class GraphPanel extends JPanel {
   public interface NodeConfigHandler {
@@ -19,6 +20,8 @@ public class GraphPanel extends JPanel {
   private Node draggedNode;
   private Node edgeStartNode;
   private Point lastMouse;
+
+  private Edge selectedEdge;
 
   private double scale = 1.0;
   private double offsetX = 0;
@@ -55,6 +58,16 @@ public class GraphPanel extends JPanel {
             return;
           }
         }
+
+        selectedEdge = null;
+
+        for (Edge edge : model.getEdges()) {
+          if (edge.contains(world)) {
+            selectedEdge = edge;
+            repaint();
+            return;
+          }
+        }
       }
 
       @Override
@@ -68,6 +81,7 @@ public class GraphPanel extends JPanel {
           lastMouse = world;
           repaint();
         } else if (edgeStartNode != null) {
+          lastMouse = world;
           repaint();
         } else if (lastMouse != null) {
           // panning
@@ -109,6 +123,13 @@ public class GraphPanel extends JPanel {
               return;
             }
           }
+
+          for (Edge edge : model.getEdges()) {
+            if (edge.contains(world) && edgeConfigHandler != null) {
+              edgeConfigHandler.configure(edge, false);
+              return;
+            }
+          }
         }
       }
 
@@ -124,6 +145,17 @@ public class GraphPanel extends JPanel {
     addMouseListener(mouse);
     addMouseMotionListener(mouse);
     addMouseWheelListener(mouse);
+  }
+
+  private ArrayList<Edge> getParallelEdges(Edge target) {
+    ArrayList<Edge> result = new ArrayList<>();
+    for (Edge e : model.getEdges()) {
+      if ((e.getFrom() == target.getFrom() && e.getTo() == target.getTo())
+          || (e.getFrom() == target.getTo() && e.getTo() == target.getFrom())) {
+        result.add(e);
+      }
+    }
+    return result;
   }
 
   public NodeConfigHandler getNodeConfigHandler() {
@@ -161,19 +193,21 @@ public class GraphPanel extends JPanel {
     g2.scale(scale, scale);
 
     for (Edge edge : model.getEdges()) {
-      edge.draw(g2);
+      ArrayList<Edge> parallels = getParallelEdges(edge);
+      parallels.sort(java.util.Comparator.comparingInt(e -> e.getEdgeID()));
+      int index = parallels.indexOf(edge);
+      edge.draw(g2, index, parallels.size(), edge == selectedEdge);
     }
 
-    /*
-     * if (edgeStartNode != null && lastMouse != null) {
-     * g2.setColor(Color.LIGHT_GRAY);
-     * g2.drawLine(
-     * edgeStartNode.getCenterX(),
-     * edgeStartNode.getCenterY(),
-     * lastMouse.x,
-     * lastMouse.y);
-     * }
-     */
+    if (edgeStartNode != null && lastMouse != null) {
+      g2.setColor(Color.LIGHT_GRAY);
+      g2.setStroke(new BasicStroke(2));
+      g2.drawLine(
+          edgeStartNode.getCenterX(),
+          edgeStartNode.getCenterY(),
+          lastMouse.x,
+          lastMouse.y);
+    }
 
     for (Node node : model.getNodes()) {
       node.draw(g2);

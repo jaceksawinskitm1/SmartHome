@@ -6,6 +6,8 @@ import java.util.List;
 public class GraphModel {
   private List<Node> nodes = new ArrayList<>();
   private List<Edge> edges = new ArrayList<>();
+  private int nextEdgeID = 0;
+  private int nextNodeID = 0;
 
   public Node addNode(Node node) {
     for (Node n : nodes) {
@@ -13,17 +15,15 @@ public class GraphModel {
         return n;
       }
     }
+    node.setNodeID(nextNodeID);
+    nextNodeID++;
     nodes.add(node);
     return node;
   }
 
   public Edge addEdge(Node from, Node to) {
-    for (Edge e : edges) {
-      if (e.from.equals(from) && e.to.equals(to)) {
-        return null;
-      }
-    }
-    Edge edge = new Edge(from, to);
+    Edge edge = new Edge(from, to, nextEdgeID);
+    nextEdgeID++;
     edges.add(edge);
     return edge;
   }

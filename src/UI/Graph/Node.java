@@ -11,6 +11,8 @@ public class Node {
   private int height = 40;
   private String label;
 
+  private int nodeID;
+
   public IP deviceIP;
 
   public Node(int x, int y, String label, IP deviceIP) {
@@ -43,7 +45,14 @@ public class Node {
     g.drawString(label, textX, textY);
   }
 
-  // getters/setters
+  public int getNodeID() {
+    return nodeID;
+  }
+
+  public void setNodeID(int nodeID) {
+    this.nodeID = nodeID;
+  }
+
   public int getCenterX() {
     return x + width / 2;
   }

@@ -5,9 +5,13 @@ import Network.NetworkDevice;
 import Network.NetworkManager;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import com.sun.net.httpserver.Authenticator.Success;
+import com.sun.source.tree.NewClassTree;
 
 public class SHManager extends NetworkDevice {
 
@@ -15,43 +19,38 @@ public class SHManager extends NetworkDevice {
     private final Comparator comparator;
     private IP devA;
     private IP devB;
-    private String successRequest;
+    private String successCode;
+    private String[] successParams;
     private final SHManager manager;
 
     public DeviceLogic(IP device, String code, String[] params, SHManager manager, Comparator comparator) {
       this.comparator = comparator;
       this.devB = device;
       this.devA = comparator.devA;
-
-      this.successRequest = code.toUpperCase() + " " + manager.getIP().getAddressString() + " "
-          + device.getAddressString() + " [";
-      if (params.length == 0)
-        this.successRequest += " ";
-      for (String p : params)
-        this.successRequest += p + ",";
-      this.successRequest = this.successRequest.substring(0, this.successRequest.length() - 1) + "]";
+      this.successCode = code;
+      this.successParams = params;
 
       this.manager = manager;
     }
 
-    public DeviceLogic(IP device, String code, String params, SHManager manager, Comparator comparator) {
-      this.comparator = comparator;
-      this.devB = device;
-      this.devA = comparator.devA;
-
-      this.successRequest = code.toUpperCase() + " " + manager.getIP().getAddressString() + " "
-          + device.getAddressString() + " " + params;
-
-      this.manager = manager;
+    private String getSuccessRequest() {
+      String successRequest = this.successCode.toUpperCase() + " " + manager.getIP().getAddressString() + " "
+          + devB.getAddressString() + " [";
+      if (successParams.length == 0)
+        successRequest += " ";
+      for (String p : successParams)
+        successRequest += p + ",";
+      successRequest = successRequest.substring(0, successRequest.length() - 1) + "]";
+      return successRequest;
     }
 
     public void Try() {
-      System.out.println("Testing logic: " + successRequest);
+      System.out.println("Testing logic: " + getSuccessRequest());
       if (!comparator.test()) {
         return;
       }
 
-      manager.networkManager.createRequest(successRequest).send();
+      manager.networkManager.createRequest(getSuccessRequest()).send();
     }
   }
 
@@ -61,7 +60,7 @@ public class SHManager extends NetworkDevice {
     };
 
     private final IP devA;
-    private final String reqA;
+    private final String codeA;
 
     private final Condition condition;
 
@@ -71,18 +70,22 @@ public class SHManager extends NetworkDevice {
 
     public Comparator(IP deviceA, String codeA, Condition condition, String constB, SHManager manager) {
       this.devA = deviceA;
-      this.reqA = codeA.toUpperCase() + " " + manager.getIP().getAddressString() + " "
-          + deviceA.getAddressString() + " []";
+      this.codeA = codeA;
+      // this.reqA =
       this.paramB = constB;
 
       this.condition = condition;
       this.manager = manager;
     }
 
+    private String getTestRequest() {
+      return codeA.toUpperCase() + " " + manager.getIP().getAddressString() + " " + devA.getAddressString() + " []";
+    }
+
     public boolean test() {
       String valueA;
 
-      NetworkManager.Request req = this.manager.networkManager.createRequest(reqA);
+      NetworkManager.Request req = this.manager.networkManager.createRequest(getTestRequest());
       req.send();
       valueA = req.getResult();
 
@@ -122,6 +125,28 @@ public class SHManager extends NetworkDevice {
           return false;
         }
       }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (!(obj instanceof Comparator))
+        return false;
+      Comparator other = (Comparator) obj;
+
+      if (!this.devA.equals(other.devA))
+        return false;
+
+      if (!this.codeA.equals(other.codeA))
+        return false;
+
+      System.out.println("this: " + this.condition + ", other: " + other.condition);
+      if (!this.condition.name().equals(other.condition.name()))
+        return false;
+
+      if (!this.paramB.equals(other.paramB))
+        return false;
+
+      return true;
     }
   }
 
@@ -168,21 +193,70 @@ public class SHManager extends NetworkDevice {
     return new Comparator(deviceA.getIP(), codeA, condition, constB, this);
   }
 
-
-  public void registerLogic(IP device, String code, String params, Comparator comparator) {
+  public void registerLogic(IP device, String code, String[] params, Comparator comparator) {
     DeviceLogic logic = new DeviceLogic(device, code, params, this, comparator);
 
     logics.add(logic);
+  }
+
+  public void deregisterLogic(IP device, String code, String[] params, Comparator comparator) {
+    for (DeviceLogic logic : logics) {
+      boolean found = true;
+      if (!device.equals(logic.devB))
+        found = false;
+
+      System.out.println("1: " + found);
+      if (!code.equals(logic.successCode))
+        found = false;
+
+      System.out.println("2: " + found);
+      if (!Arrays.equals(params, logic.successParams))
+        found = false;
+
+      System.out.println("3: " + found);
+      if (!comparator.equals(logic.comparator))
+        found = false;
+
+      System.out.println("4: " + found);
+      if (found) {
+        logics.remove(logic);
+        return;
+      }
+    }
   }
 
   public void deregisterLogic(DeviceLogic logic) {
     logics.remove(logic);
   }
 
+  private String[] parseStringArray(String str) {
+    if (str.length() <= 2) {
+      return new String[] {};
+    }
+    if (!str.startsWith("[") || !str.endsWith("]")) {
+      // Not a list
+      return new String[] {str};
+    }
+    String s = str.substring(1, str.length() - 1);
+    return s.split(",");
+  }
+
+  private String createStringArray(Object[] objs) {
+    if (objs.length == 0) {
+      return "[]";
+    }
+
+    String res = "[";
+    for (Object obj : objs) {
+      res += obj.toString() + ",";
+    }
+    res = res.substring(0, res.length() - 1) + "]";
+    return res;
+  }
+
   public SHManager() {
     this(new NetworkManager());
   }
-
 
   public SHManager(NetworkManager networkManager) {
     Thread backgroundLoop = new Thread(this::loop);
@@ -215,13 +289,35 @@ public class SHManager extends NetworkDevice {
     registerNetworkCode("ADD_LOGIC", "NULL", (IP[] ips, String[] params) -> {
       // params: action_dev_ip, action_code, action_params, cond_dev_ip, cond_code,
       // cond_type, cond_val
-      System.out.println("Adding logic: params: " + params[2]);
+      System.out.println("Adding logic: params: " + Arrays.toString(params));
+
+      // Remove old duplicates (if exist)
+deregisterLogic(
+          new IP(params[0]),
+          params[1],
+          parseStringArray(params[2]),
+          createComparatorStringBased(params[3], params[4], params[5], params[6]));
+
       registerLogic(
           new IP(params[0]),
           params[1],
-          params[2],
+          parseStringArray(params[2]),
           // Conditions
           // TODO: Add multiple
+          createComparatorStringBased(params[3], params[4], params[5], params[6]));
+
+      return "";
+    });
+
+    registerNetworkCode("DEL_LOGIC", "NULL", (IP[] ips, String[] params) -> {
+      // params: action_dev_ip, action_code, action_params, cond_dev_ip, cond_code,
+      // cond_type, cond_val
+      System.out.println("Deleting logic: " + Arrays.toString(params));
+
+      deregisterLogic(
+          new IP(params[0]),
+          params[1],
+          parseStringArray(params[2]),
           createComparatorStringBased(params[3], params[4], params[5], params[6]));
 
       return "";
@@ -232,10 +328,22 @@ public class SHManager extends NetworkDevice {
         return "[]";
       }
 
+      // return: action_dev_ip, action_code, action_params, cond_dev_ip, cond_code,
+      // cond_type, cond_val
+
       String res = "[";
       for (DeviceLogic logic : logics) {
-        res += logic.devA.getAddressString() + ",";
         res += logic.devB.getAddressString() + ",";
+        res += logic.successCode + ",";
+        // Use only one paramater
+        if (logic.successParams.length > 0)
+          res += logic.successParams[0] + ",";
+        else
+          res += "!!!MISSING!!!,";
+        res += logic.devA.getAddressString() + ",";
+        res += logic.comparator.codeA + ",";
+        res += logic.comparator.condition.name() + ",";
+        res += logic.comparator.paramB + ",";
       }
       res = res.substring(0, res.length() - 1) + "]";
 

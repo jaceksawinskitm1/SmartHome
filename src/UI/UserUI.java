@@ -1,7 +1,6 @@
 package UI;
 
 import Network.IP;
-import Network.NetworkDevice;
 import Network.NetworkManager;
 import Network.UserDevice;
 import UI.Graph.*;
@@ -14,6 +13,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
 
@@ -24,8 +24,8 @@ public class UserUI extends JFrame {
   protected final GraphModel model = new GraphModel();
   protected GraphPanel graphPanel;
 
-  protected JComponent actionValue;
-  protected JComponent condValue;
+  protected ConditionStructure action;
+  protected ConditionStructure condition;
 
   private IP shmanagerIP;
 
@@ -59,143 +59,28 @@ public class UserUI extends JFrame {
         refreshGraph();
       }
       SwingUtilities.invokeLater(() -> {
-        JPanel dialogPanel = new JPanel();
-        dialogPanel.setLayout(new BoxLayout(dialogPanel, BoxLayout.Y_AXIS));
-        JPanel conditionPanel = new JPanel(new FlowLayout());
-        JPanel actionPanel = new JPanel();
-        // conditionPanel.setPreferredSize(new Dimension(600, 250));
-        JOptionPane pane = new JOptionPane(dialogPanel,
-            JOptionPane.PLAIN_MESSAGE,
-            JOptionPane.OK_CANCEL_OPTION);
+        JButton deleteBtn = new JButton("Delete");
+        JButton okBtn = new JButton("Ok");
+        JButton cancelBtn = new JButton("Cancel");
+
+        JOptionPane pane = new JOptionPane(null,
+            JOptionPane.QUESTION_MESSAGE,
+            JOptionPane.DEFAULT_OPTION);
+
+        okBtn.addActionListener(e -> pane.setValue(okBtn));
+        cancelBtn.addActionListener(e -> pane.setValue(cancelBtn));
+        deleteBtn.addActionListener(e -> pane.setValue(deleteBtn));
+
+        if (isNew) {
+          pane.setOptions(new Object[] { cancelBtn, okBtn });
+        } else {
+          pane.setOptions(new Object[] { cancelBtn, okBtn, deleteBtn });
+        }
+
         JDialog dialog = pane.createDialog("Logic Config");
+        JPanel dialogPanel = createLogicConfigPanel(edge, pane, dialog);
 
-        NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
-            edge.from.deviceIP, "ADVERT", new String[] {});
-        r.send();
-        String rawFrom = r.getResult();
-
-        String fromDevID = networkManager
-            .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
-                new String[] { edge.from.deviceIP.getAddressString() })
-            .send()
-            .getResult();
-        String toDevID = networkManager
-            .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
-                new String[] { edge.to.deviceIP.getAddressString() })
-            .send()
-            .getResult();
-
-        Font labelFont = new Font("Serif", Font.BOLD, 20);
-        JLabel ifLabel = new JLabel("If (" + fromDevID + ")");
-        ifLabel.setFont(labelFont);
-        conditionPanel.add(ifLabel);
-
-        JLabel thenLabel = new JLabel("Then (" + toDevID + ")");
-        thenLabel.setFont(labelFont);
-        actionPanel.add(thenLabel);
-
-        JComboBox parameter = generateValuesCombo(rawFrom);
-
-        condValue = generateCondValueField((String) parameter.getSelectedItem(), rawFrom);
-
-        JComboBox condType = new JComboBox(new String[] {
-            "Equals",
-            "Not equals",
-            "Greater than",
-            "Less than",
-            "Greater than or equal to",
-            "Less than or equal to"
-        });
-
-        parameter.addActionListener(new ActionListener() {
-          @Override
-          public void actionPerformed(ActionEvent e) {
-            conditionPanel.removeAll();
-
-            System.out.println("raw: " + rawFrom);
-            conditionPanel.add(ifLabel);
-            conditionPanel.add(parameter);
-            conditionPanel.add(condType);
-            condValue = generateCondValueField((String) parameter.getSelectedItem(), rawFrom);
-            conditionPanel.add(condValue);
-
-            conditionPanel.revalidate();
-            conditionPanel.repaint();
-            pane.revalidate();
-            pane.repaint();
-            dialog.pack();
-          }
-        });
-
-        conditionPanel.add(parameter);
-        conditionPanel.add(condType);
-        conditionPanel.add(condValue);
-
-        r = networkManager.createRequest(userDevice.getIP(),
-            edge.to.deviceIP, "ADVERT", new String[] {});
-        r.send();
-        String rawTo = r.getResult();
-
-        JComboBox actionCode = generateActionCodeCombo(rawTo);
-        actionValue = generateCondValueField((String) actionCode.getSelectedItem(), rawTo);
-        actionCode.addActionListener(new ActionListener() {
-          @Override
-          public void actionPerformed(ActionEvent e) {
-            actionPanel.removeAll();
-
-            actionPanel.add(thenLabel);
-            actionPanel.add(actionCode);
-            actionValue = generateCondValueField((String) actionCode.getSelectedItem(), rawTo);
-            actionPanel.add(actionValue);
-
-            actionPanel.revalidate();
-            actionPanel.repaint();
-            pane.revalidate();
-            pane.repaint();
-            dialog.pack();
-          }
-        });
-
-        actionPanel.add(actionCode);
-        actionPanel.add(actionValue);
-
-        dialogPanel.add(conditionPanel);
-        dialogPanel.add(actionPanel);
-
-        // Save changes when closing
-        pane.addPropertyChangeListener(evt -> {
-          if (evt.getPropertyName().equals(JOptionPane.VALUE_PROPERTY)
-              && evt.getNewValue() != null
-              && evt.getNewValue() != JOptionPane.UNINITIALIZED_VALUE) {
-
-            dialog.dispose();
-
-            if (evt.getNewValue().equals(JOptionPane.OK_OPTION)) {
-              // OK
-              networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_LOGIC", new String[] {
-                  edge.to.deviceIP.getAddressString(),
-                  "SET_" + (String) actionCode.getSelectedItem(),
-                  "[" + getInputValueString(actionValue) + "]",
-
-                  edge.from.deviceIP.getAddressString(),
-                  "GET_" + (String) parameter.getSelectedItem(),
-                  switch ((String) condType.getSelectedItem()) {
-                    case "Equals" -> "EQUAL";
-                    case "Not equals" -> "NOT_EQUALS";
-                    case "Greater than" -> "GREATER_THAN";
-                    case "Greater than or equal to" -> "GREATER_EQUAL";
-                    case "Less than" -> "LESS_THAN";
-                    case "Less than or equal to" -> "LESS_EQUAL";
-                    default -> "EQUAL";
-                  },
-                  getInputValueString(condValue),
-              }).send();
-
-              refreshGraph();
-            }
-            // Cancelled
-          }
-        });
+        pane.setMessage(dialogPanel);
 
         dialog.pack();
         dialog.setVisible(true);
@@ -254,7 +139,199 @@ public class UserUI extends JFrame {
         "FINDSHMANAGER", new String[] {}).send().getResult());
   };
 
+  private JPanel createLogicConfigPanel(Edge edge, JOptionPane pane, JDialog dialog) {
+    JPanel dialogPanel = new JPanel();
+    dialogPanel.setLayout(new BoxLayout(dialogPanel, BoxLayout.Y_AXIS));
+    JPanel conditionPanel = new JPanel(new FlowLayout());
+    JPanel actionPanel = new JPanel();
+    // conditionPanel.setPreferredSize(new Dimension(600, 250));
+
+    NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
+        edge.from.deviceIP, "ADVERT", new String[] {});
+    r.send();
+    String rawFrom = r.getResult();
+
+    String fromDevID = networkManager
+        .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
+            new String[] { edge.from.deviceIP.getAddressString() })
+        .send()
+        .getResult();
+    String toDevID = networkManager
+        .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
+            new String[] { edge.to.deviceIP.getAddressString() })
+        .send()
+        .getResult();
+
+    Font labelFont = new Font("Serif", Font.BOLD, 20);
+    JLabel ifLabel = new JLabel("If (" + fromDevID + ")");
+    ifLabel.setFont(labelFont);
+    conditionPanel.add(ifLabel);
+
+    JLabel thenLabel = new JLabel("Then (" + toDevID + ")");
+    thenLabel.setFont(labelFont);
+    actionPanel.add(thenLabel);
+
+    condition = generateCondition(rawFrom, edge.logicData.conditionCode, edge.logicData.conditionValue);
+
+    JComboBox condType = new JComboBox(condition.availableTypes);
+
+    if (edge.logicData.conditionType != null) {
+      condType.setSelectedItem(
+          switch (edge.logicData.conditionType) {
+            case "EQUAL" -> "Equals";
+            case "NOT_EQUAL" -> "Not equals";
+            case "GREATER_THAN" -> "Greater than";
+            case "GREATER_EQUAL" -> "Greater than or equal to";
+            case "LESS_THAN" -> "Less than";
+            case "LESS_EQUAL" -> "Less than or equal to";
+            default -> "Equals";
+          });
+    }
+
+    condition.code.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        conditionPanel.removeAll();
+
+        conditionPanel.add(ifLabel);
+
+        updateCondition(rawFrom, condition);
+
+        JComboBox condType = new JComboBox(condition.availableTypes);
+        if (edge.logicData.conditionType != null) {
+          condType.setSelectedItem(
+              switch (edge.logicData.conditionType) {
+                case "EQUAL" -> "Equals";
+                case "NOT_EQUAL" -> "Not equals";
+                case "GREATER_THAN" -> "Greater than";
+                case "GREATER_EQUAL" -> "Greater than or equal to";
+                case "LESS_THAN" -> "Less than";
+                case "LESS_EQUAL" -> "Less than or equal to";
+                default -> "Equals";
+              });
+        }
+
+        conditionPanel.add(condition.code);
+        conditionPanel.add(condType);
+        conditionPanel.add(condition.value);
+
+        conditionPanel.revalidate();
+        conditionPanel.repaint();
+        pane.revalidate();
+        pane.repaint();
+        dialog.pack();
+      }
+    });
+
+    conditionPanel.add(condition.code);
+    conditionPanel.add(condType);
+    conditionPanel.add(condition.value);
+
+    r = networkManager.createRequest(userDevice.getIP(),
+        edge.to.deviceIP, "ADVERT", new String[] {});
+    r.send();
+    String rawTo = r.getResult();
+
+    System.out.println("ActionParams: " + edge.logicData.actionParams);
+    action = generateCondition(rawTo, edge.logicData.actionCode, edge.logicData.actionParams);
+
+    action.code.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        actionPanel.removeAll();
+
+        actionPanel.add(thenLabel);
+        updateCondition(rawTo, action);
+        actionPanel.add(action.code);
+        actionPanel.add(action.value);
+
+        actionPanel.revalidate();
+        actionPanel.repaint();
+        pane.revalidate();
+        pane.repaint();
+        dialog.pack();
+      }
+    });
+
+    actionPanel.add(action.code);
+    actionPanel.add(action.value);
+
+    dialogPanel.add(conditionPanel);
+    dialogPanel.add(actionPanel);
+
+    // Save changes when closing
+    pane.addPropertyChangeListener(evt -> {
+      if (evt.getPropertyName().equals(JOptionPane.VALUE_PROPERTY)
+          && evt.getNewValue() != null
+          && evt.getNewValue() != JOptionPane.UNINITIALIZED_VALUE) {
+
+        if (evt.getNewValue().equals(pane.getOptions()[1] /* OK button */)) {
+          // OK
+          if (!edge.logicData.isEmpty()) {
+            System.out.println("deleting");
+            networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
+                edge.to.deviceIP.getAddressString(),
+                "SET_" + (String) edge.logicData.actionCode,
+                edge.logicData.actionParams,
+
+                edge.from.deviceIP.getAddressString(),
+                "GET_" + (String) edge.logicData.conditionCode,
+                edge.logicData.conditionType,
+                edge.logicData.conditionValue,
+            }).send();
+          }
+
+          networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_LOGIC", new String[] {
+              edge.to.deviceIP.getAddressString(),
+              "SET_" + (String) action.code.getSelectedItem(),
+              "[" + getInputValueString(action.value) + "]",
+
+              edge.from.deviceIP.getAddressString(),
+              "GET_" + (String) condition.code.getSelectedItem(),
+              switch ((String) condType.getSelectedItem()) {
+                case "Equals" -> "EQUAL";
+                case "Not equals" -> "NOT_EQUAL";
+                case "Greater than" -> "GREATER_THAN";
+                case "Greater than or equal to" -> "GREATER_EQUAL";
+                case "Less than" -> "LESS_THAN";
+                case "Less than or equal to" -> "LESS_EQUAL";
+                default -> "EQUAL";
+              },
+              getInputValueString(condition.value),
+          }).send();
+
+          refreshGraph();
+        } else if (evt.getNewValue().equals(pane.getOptions()[0] /* Cancel button */)) {
+          // Cancelled
+        } else if (pane.getOptions().length >= 3
+            && evt.getNewValue().equals(pane.getOptions()[2] /* Delete button */)) {
+          // Delete
+          // TODO: CHANGE TO USE THE edge.logicData values instead of the current
+          // temporary
+          networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
+              edge.to.deviceIP.getAddressString(),
+              "SET_" + (String) edge.logicData.actionCode,
+              edge.logicData.actionParams,
+
+              edge.from.deviceIP.getAddressString(),
+              "GET_" + (String) edge.logicData.conditionCode,
+              edge.logicData.conditionType,
+              edge.logicData.conditionValue,
+          }).send();
+
+          refreshGraph();
+        }
+
+        dialog.dispose();
+      }
+    });
+
+    return dialogPanel;
+
+  }
+
   private void generateGraph() {
+    model.clearEdges();
     HashMap<String, Node> nodes = new HashMap<>();
     for (int i = 0; i < discoveredIPs.size(); i++) {
       double angle = ((double) i / discoveredIPs.size()) * (3.14159 * 2);
@@ -275,15 +352,27 @@ public class UserUI extends JFrame {
         .createRequest(userDevice.getIP(), shmanagerIP, "GET_LOGICS", new String[] {}).send()
         .getResult();
 
-    String[] ips = parseStringArray(logics);
+    // The logics stored one after the other in 6 element chunks
+    String[] combined = parseStringArray(logics);
+    System.out.println("Logics: " + logics);
 
-    for (int i = 0; i < ips.length; i += 2) {
-      if (i >= ips.length - 1)
+    for (int i = 0; i < combined.length; i += 7) {
+      if (i >= combined.length - 6)
         break;
 
-      model.addEdge(nodes.get(ips[i]), nodes.get(ips[i + 1]));
+      String ipA = combined[i + 3];
+      String ipB = combined[i];
+
+      Edge edge = model.addEdge(nodes.get(ipA), nodes.get(ipB));
+
+      edge.logicData.actionCode = combined[i + 1].replaceFirst("SET_", "");
+      edge.logicData.actionParams = combined[i + 2];
+
+      edge.logicData.conditionCode = combined[i + 4].replaceFirst("GET_", "");
+      edge.logicData.conditionType = combined[i + 5];
+      edge.logicData.conditionValue = combined[i + 6];
+      System.out.println("ConditionValue: " + combined[i + 6]);
     }
-    ;
   }
 
   private void scanNetwork() {
@@ -341,7 +430,51 @@ public class UserUI extends JFrame {
     values.add(new Value(c, type, setter, getter));
   }
 
-  private JComboBox generateValuesCombo(String rawCodes) {
+  private class ConditionStructure {
+    String[] availableTypes;
+    JComboBox code;
+    JComponent value;
+  }
+
+  private ConditionStructure generateCondition(String rawCodes, String code, String defaultValue) {
+    ConditionStructure struct = new ConditionStructure();
+    struct.code = generateValuesCombo(rawCodes, code);
+
+    ArrayList<String> availableConditionTypes = new ArrayList<String>(Arrays.asList(new String[] {
+        "Equals",
+        "Not equals",
+        "Greater than",
+        "Less than",
+        "Greater than or equal to",
+        "Less than or equal to"
+    }));
+
+    struct.value = generateCondValueField((String) struct.code.getSelectedItem(), rawCodes,
+        defaultValue,
+        availableConditionTypes);
+    System.out.println("Available: " + availableConditionTypes.toString());
+    struct.availableTypes = availableConditionTypes.toArray(new String[] {});
+    return struct;
+  }
+
+  private void updateCondition(String rawCodes, ConditionStructure condition) {
+    ArrayList<String> availableConditionTypes = new ArrayList<String>(Arrays.asList(new String[] {
+        "Equals",
+        "Not equals",
+        "Greater than",
+        "Less than",
+        "Greater than or equal to",
+        "Less than or equal to"
+    }));
+
+    condition.value = generateCondValueField((String) condition.code.getSelectedItem(), rawCodes,
+        null,
+        availableConditionTypes);
+    System.out.println("Available: " + availableConditionTypes.toString());
+    condition.availableTypes = availableConditionTypes.toArray(new String[] {});
+  }
+
+  private JComboBox generateValuesCombo(String rawCodes, String defaultValue) {
     String clean = rawCodes.replace("[", "").replace("]", "");
     String[] codes = clean.split(",");
 
@@ -362,6 +495,9 @@ public class UserUI extends JFrame {
     }
 
     JComboBox box = new JComboBox(res.toArray(new String[] {}));
+    if (defaultValue != null) {
+      box.setSelectedItem(defaultValue);
+    }
     return box;
   }
 
@@ -381,7 +517,8 @@ public class UserUI extends JFrame {
     return "MISSING TYPE!!!";
   }
 
-  private JComponent generateCondValueField(String paramName, String rawCodes) {
+  private JComponent generateCondValueField(String paramName, String rawCodes, String defaultValue,
+      ArrayList<String> comparisonTypes) {
     String clean = rawCodes.replace("[", "").replace("]", "");
     String[] codes = clean.split(",");
 
@@ -398,24 +535,55 @@ public class UserUI extends JFrame {
       if (val.getter && val.name.equals(paramName)) {
         switch (val.type) {
           case "INT":
-            return new JTextField(10);
+            JTextField tf = new JTextField(10);
+            if (defaultValue != null)
+              tf.setText(defaultValue);
+            return tf;
           case "FLOAT":
-            return new JTextField(10);
+            tf = new JTextField(10);
+            if (defaultValue != null)
+              tf.setText(defaultValue);
+            return tf;
           case "STRING":
-            return new JTextField(10);
+            tf = new JTextField(10);
+            if (defaultValue != null)
+              tf.setText(defaultValue);
+            comparisonTypes.remove("Greater than");
+            comparisonTypes.remove("Greater than or equal to");
+            comparisonTypes.remove("Less than");
+            comparisonTypes.remove("Less than or equal to");
+            return tf;
           case "COLOR":
-            JComponent comp = new JColorChooser();
-            comp.setSize(200, 200);
-            return comp;
+            JColorChooser cc = new JColorChooser();
+            cc.setSize(200, 200);
+            if (defaultValue != null)
+              cc.setColor(Color.decode(defaultValue));
+            comparisonTypes.remove("Greater than");
+            comparisonTypes.remove("Greater than or equal to");
+            comparisonTypes.remove("Less than");
+            comparisonTypes.remove("Less than or equal to");
+            return cc;
           case "RANGE":
             // Range from 0 to 1
             JSlider slider = new JSlider();
+            if (defaultValue != null)
+              slider.setValue((int) (Double.parseDouble(defaultValue) * 100));
             return slider;
           case "BOOL":
             JCheckBox checkBox = new JCheckBox();
+            System.out.println("defVal: " + defaultValue);
+            if (defaultValue != null)
+              checkBox.setSelected(defaultValue.equals("true"));
+            comparisonTypes.remove("Greater than");
+            comparisonTypes.remove("Greater than or equal to");
+            comparisonTypes.remove("Less than");
+            comparisonTypes.remove("Less than or equal to");
             return checkBox;
           default:
-            return new JTextField(10);
+            tf = new JTextField(10);
+            if (defaultValue != null)
+              tf.setText(defaultValue);
+            return tf;
         }
       }
     }
