@@ -170,7 +170,7 @@ public class UserUI extends JFrame {
       JOptionPane.showOptionDialog(
           null,
           configPanel,
-          "Configure " + devID,
+          "Configure " + devID + " (" + node.deviceIP.getAddressString() + ")",
           JOptionPane.DEFAULT_OPTION,
           JOptionPane.INFORMATION_MESSAGE,
           null,
