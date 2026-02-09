@@ -59,7 +59,7 @@ public class IP {
 
     public IP() {}
 
-    public IP(byte[] address) {
+    public IP(byte... address) {
         setAddress(address);
     }
 

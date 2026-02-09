@@ -12,11 +12,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.Format;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Objects;
+import java.util.*;
 
 public class UserUI extends JFrame {
   private final NetworkManager networkManager;
@@ -216,7 +214,7 @@ public class UserUI extends JFrame {
       });
     });
 
-    JPanel refreshPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JPanel topPanel = new JPanel(new BorderLayout());
     JButton refreshButton = new JButton("Refresh");
     refreshButton.addActionListener(new ActionListener() {
       @Override
@@ -224,10 +222,63 @@ public class UserUI extends JFrame {
         refreshGraph();
       }
     });
-    refreshPanel.add(refreshButton);
-    refreshPanel.setSize(100, 50);
+    JButton addDeviceButton = new JButton("Add device");
 
-    add(refreshPanel, BorderLayout.NORTH);
+    JPanel addDevicePanel = new JPanel();
+    addDevicePanel.setLayout(new BoxLayout(addDevicePanel, BoxLayout.Y_AXIS));
+    JPanel addIpPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    String ipPrefix = networkManager.getBroadcastAddress().getAddressString().substring(0, networkManager.getBroadcastAddress().getAddressString().length() - 3);
+    JLabel ipLabel = new JLabel("IP: " + ipPrefix);
+    JFormattedTextField ipField = new JFormattedTextField(NumberFormat.getIntegerInstance());
+    ipField.setColumns(3);
+    addIpPanel.add(ipLabel);
+    addIpPanel.add(ipField);
+
+    JPanel addIdPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JLabel idLabel = new JLabel("ID/Name: ");
+    JTextField idField = new JTextField(12);
+    addIdPanel.add(idLabel);
+    addIdPanel.add(idField);
+
+    addDevicePanel.add(addIpPanel);
+    addDevicePanel.add(addIdPanel);
+
+
+    JButton addButton = new JButton("Add");
+    addButton.addActionListener(e -> {
+      System.out.println(ipPrefix + Integer.parseInt(ipField.getText()));
+      networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_DEVICE", new String[] {
+              new IP(ipPrefix + Integer.parseInt(ipField.getText())).getAddressString(), idField.getText()
+      }).send();
+      refreshGraph();
+      JOptionPane.getRootFrame().dispose();
+    });
+
+    JButton cancelButton = new JButton("Cancel");
+    cancelButton.addActionListener(e -> {
+      JOptionPane.getRootFrame().dispose();
+    });
+
+    Object[] options = new Object[] {
+            addButton, cancelButton
+    };
+
+    addDeviceButton.addActionListener(e -> {
+      JOptionPane.showOptionDialog(
+              null,
+              addDevicePanel,
+              "Add device",
+              JOptionPane.DEFAULT_OPTION,
+              JOptionPane.INFORMATION_MESSAGE,
+              null,
+              options,
+              options[0]);
+    });
+    topPanel.add(refreshButton, BorderLayout.WEST);
+    topPanel.add(addDeviceButton, BorderLayout.EAST);
+    topPanel.setSize(100, 100);
+
+    add(topPanel, BorderLayout.NORTH);
     add(graphPanel, BorderLayout.CENTER);
   }
 
@@ -747,6 +798,14 @@ public class UserUI extends JFrame {
           case "RANGE":
             // Range from 0 to 1
             JSlider slider = new JSlider();
+            slider.setPaintTrack(true);
+            slider.setPaintTicks(true);
+            Hashtable<Integer, JLabel> table = new Hashtable<>();
+            table.put(0, new JLabel("0"));
+            table.put(50, new JLabel("50"));
+            table.put(100, new JLabel("100"));
+            slider.setLabelTable(table);
+            slider.setPaintLabels(true);
             if (defaultValue != null)
               slider.setValue((int) (Double.parseDouble(defaultValue) * 100));
             return slider;

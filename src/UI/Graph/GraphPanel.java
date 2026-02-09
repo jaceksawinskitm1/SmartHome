@@ -111,6 +111,8 @@ public class GraphPanel extends JPanel {
         draggedNode = null;
         edgeStartNode = null;
         lastMouse = null;
+
+        repaint();
       }
 
       @Override
