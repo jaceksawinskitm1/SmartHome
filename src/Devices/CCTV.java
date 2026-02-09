@@ -11,7 +11,6 @@ public class CCTV extends SHDevice {
         registerNetworkCode("SET_STATUS", "BOOL", (String[] params) -> this.setStatus(Boolean.parseBoolean(params[0])));  // Ustawia stan (włączona/wyłączona)
 
         registerNetworkCode("GET_MOVEMENT", "BOOL", () -> String.valueOf(movementDetected));  // Zwraca, czy wykryto ruch
-        registerNetworkCode("SET_MOVEMENT", "BOOL", (String[] params) -> this.setMovement(Boolean.parseBoolean(params[0])));  // Ustawia stan detekcji ruchu
     }
 
     // Getter stanu kamery (włączona/wyłączona)
