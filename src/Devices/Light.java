@@ -2,7 +2,7 @@ package Devices;
 
 public class Light extends SHDevice {
     private boolean isOn = false;
-    private double brightness = 0.0;
+    private double brightness = 1.0;
     private String hexColor = "#FFFFFF";
 
     public Light() {

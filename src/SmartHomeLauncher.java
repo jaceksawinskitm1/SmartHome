@@ -31,9 +31,7 @@ public class SmartHomeLauncher {
       SimulationFrame simFrame = new SimulationFrame(shManager, networkManager);
       simFrame.setVisible(true);
 
-      // Okno Użytkownika (dostęp tylko przez sieć)
-      UserUI userFrame = new UserUI(userDevice, networkManager);
-      userFrame.setVisible(true);
+      userDevice.showUI();
     });
   }
 

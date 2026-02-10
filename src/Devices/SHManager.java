@@ -10,6 +10,9 @@ import java.util.HashMap;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+
 public class SHManager extends NetworkDevice {
 
   public static class DeviceLogic {
@@ -20,9 +23,11 @@ public class SHManager extends NetworkDevice {
     private String[] successParams;
     private final SHManager manager;
     private int priority;
+    private int id;
 
-    public DeviceLogic(IP device, String code, String[] params, SHManager manager, Comparator comparator,
+    public DeviceLogic(int id, IP device, String code, String[] params, SHManager manager, Comparator comparator,
         int priority) {
+      this.id = id;
       this.comparator = comparator;
       this.devB = device;
       this.devA = comparator.devA;
@@ -32,6 +37,10 @@ public class SHManager extends NetworkDevice {
 
       this.manager = manager;
     }
+
+    public int getID() {
+      return this.id;
+    };
 
     private String getSuccessRequest() {
       String successRequest = this.successCode.toUpperCase() + " " + manager.getIP().getAddressString() + " "
@@ -44,12 +53,20 @@ public class SHManager extends NetworkDevice {
       return successRequest;
     }
 
-    public void Try() {
+    public boolean Try() {
       System.out.println("Testing logic: " + getSuccessRequest());
       if (!comparator.test()) {
-        return;
+        return false;
       }
+      
+      return true;
+    }
 
+    public void send() {
+      manager.networkManager.createRequest(manager.getIP(), manager.networkManager.getBroadcastAddress(), "_LOGIC_RAN",
+          new String[] {
+              String.valueOf(this.getID())
+          }).send();
       manager.networkManager.createRequest(getSuccessRequest()).send();
     }
   }
@@ -100,12 +117,38 @@ public class SHManager extends NetworkDevice {
 
       // Cast to double for further comparisons
       double dA, dB;
+      LocalTime ta, tb;
 
       try {
         dA = Double.parseDouble(valueA);
         dB = Double.parseDouble(paramB);
       } catch (NumberFormatException e) {
-        throw new RuntimeException("Comparator: invalid data, can't cast " + valueA + " and " + paramB + " to double.");
+        try {
+          ta = LocalTime.parse(valueA, DateTimeFormatter.ISO_LOCAL_TIME);
+          tb = LocalTime.parse(paramB, DateTimeFormatter.ISO_LOCAL_TIME);
+          System.out.println(ta);
+
+          switch (this.condition) {
+            case GREATER_THAN -> {
+              return ta.isAfter(tb);
+            }
+            case GREATER_EQUAL -> {
+              return ta.isAfter(tb) || ta.equals(tb);
+            }
+            case LESS_THAN -> {
+              return ta.isBefore(tb);
+            }
+            case LESS_EQUAL -> {
+              return ta.isBefore(tb) || ta.equals(tb);
+            }
+            default -> {
+              return false;
+            }
+          }
+        } catch (RuntimeException e1) {
+          throw new RuntimeException(
+              "Comparator: invalid data, can't cast " + valueA + " and " + paramB + " to double or LocalTime.");
+        }
       }
 
       switch (this.condition) {
@@ -155,7 +198,8 @@ public class SHManager extends NetworkDevice {
 
   private final HashMap<String, IP> devices = new HashMap<>();
 
-  private final ArrayList<DeviceLogic> logics = new ArrayList<>();
+  private final ArrayList<DeviceLogic> logics = new ArrayList<DeviceLogic>();
+  private int nextLogicID = 0;
 
   public NetworkManager getNetworkManager() {
     return networkManager;
@@ -174,7 +218,7 @@ public class SHManager extends NetworkDevice {
     if (devices.containsValue(dev))
       return;
 
-    //dev.leaseIP(this.getNetworkManager());
+    // dev.leaseIP(this.getNetworkManager());
     networkManager.createRequest(this.getIP(), dev, "_CONNECT_MANAGER", new String[] {}).send();
     devices.put(id, dev);
   }
@@ -201,31 +245,17 @@ public class SHManager extends NetworkDevice {
     return new Comparator(deviceA.getIP(), codeA, condition, constB, this);
   }
 
-  public void registerLogic(IP device, String code, String[] params, Comparator comparator, String priority) {
-    DeviceLogic logic = new DeviceLogic(device, code, params, this, comparator, Integer.valueOf(priority));
+  public int registerLogic(IP device, String code, String[] params, Comparator comparator, String priority) {
+    DeviceLogic logic = new DeviceLogic(nextLogicID, device, code, params, this, comparator, Integer.valueOf(priority));
 
     logics.add(logic);
+    return nextLogicID++;
   }
 
-  public void deregisterLogic(IP device, String code, String[] params, Comparator comparator) {
-    for (DeviceLogic logic : logics) {
-      boolean found = true;
-      if (!device.equals(logic.devB))
-        found = false;
-
-      if (!code.equals(logic.successCode))
-        found = false;
-
-      if (!Arrays.equals(params, logic.successParams))
-        found = false;
-
-      if (!comparator.equals(logic.comparator))
-        found = false;
-
-      if (found) {
-        logics.remove(logic);
-        return;
-      }
+  public void deregisterLogic(int id) {
+    for (int i = logics.size() - 1; i >= 0; i--) {
+      if (logics.get(i).getID() == id)
+        logics.remove(i);
     }
   }
 
@@ -233,7 +263,7 @@ public class SHManager extends NetworkDevice {
     logics.remove(logic);
   }
 
-  private String[] parseStringArray(String str) {
+  private static String[] parseStringArray(String str) {
     if (str.length() <= 2) {
       return new String[] {};
     }
@@ -245,7 +275,7 @@ public class SHManager extends NetworkDevice {
     return s.split(",");
   }
 
-  private String createStringArray(Object[] objs) {
+  private static String createStringArray(Object[] objs) {
     if (objs.length == 0) {
       return "[]";
     }
@@ -295,37 +325,19 @@ public class SHManager extends NetworkDevice {
       // cond_type, cond_val, priority
       System.out.println("Adding logic: params: " + Arrays.toString(params));
 
-      // Remove old duplicates (if exist)
-      deregisterLogic(
-          new IP(params[0]),
-          params[1],
-          parseStringArray(params[2]),
-          createComparatorStringBased(params[3], params[4], params[5], params[6]));
-
-      registerLogic(
+      return String.valueOf(registerLogic(
           new IP(params[0]),
           params[1],
           parseStringArray(params[2]),
           // Conditions
           // TODO: Add multiple
           createComparatorStringBased(params[3], params[4], params[5], params[6]),
-          params[7] 
-      );
-
-      return "";
+          params[7]));
     });
 
     registerNetworkCode("DEL_LOGIC", "NULL", (IP[] ips, String[] params) -> {
-      // params: action_dev_ip, action_code, action_params, cond_dev_ip, cond_code,
-      // cond_type, cond_val
       System.out.println("Deleting logic: " + Arrays.toString(params));
-
-      deregisterLogic(
-          new IP(params[0]),
-          params[1],
-          parseStringArray(params[2]),
-          createComparatorStringBased(params[3], params[4], params[5], params[6]));
-
+      deregisterLogic(Integer.valueOf(params[0]));
       return "";
     });
 
@@ -334,11 +346,13 @@ public class SHManager extends NetworkDevice {
         return "[]";
       }
 
-      // return: action_dev_ip, action_code, action_params, cond_dev_ip, cond_code,
+      // return: logic_id, action_dev_ip, action_code, action_params, cond_dev_ip,
+      // cond_code,
       // cond_type, cond_val
 
       String res = "[";
       for (DeviceLogic logic : logics) {
+        res += logic.getID() + ",";
         res += logic.devB.getAddressString() + ",";
         res += logic.successCode + ",";
         // Use only one paramater
@@ -357,7 +371,6 @@ public class SHManager extends NetworkDevice {
       return res;
     });
 
-
     registerNetworkCode("ADD_DEVICE", "NULL", (IP[] ips, String[] params) -> {
       // params: device_ip, device_id
       registerDevice(params[1], new IP(params[0]));
@@ -371,19 +384,25 @@ public class SHManager extends NetworkDevice {
 
   private void loop() {
     // Runs every second
-    
+
     // Try every logic connection
     logics.sort((a, b) -> {
       return Integer.compare(a.priority, b.priority);
     });
 
+    ArrayList<DeviceLogic> toDo = new ArrayList<DeviceLogic>();
 
     for (DeviceLogic logic : logics) {
-      logic.Try();
+      if (logic.Try())
+        toDo.add(logic);
+    }
+
+    for (DeviceLogic logic : toDo) {
+      logic.send();
     }
 
     try {
-      TimeUnit.SECONDS.sleep(1);
+      TimeUnit.MILLISECONDS.sleep(500);
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     }

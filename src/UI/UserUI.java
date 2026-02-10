@@ -472,20 +472,13 @@ public class UserUI extends JFrame {
           // OK
           if (!edge.logicData.isEmpty()) {
             networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
-                edge.to.deviceIP.getAddressString(),
-                ((String) edge.logicData.actionCode).toUpperCase(),
-                edge.logicData.actionParams,
-
-                edge.from.deviceIP.getAddressString(),
-                ((String) edge.logicData.conditionCode).toUpperCase(),
-                edge.logicData.conditionType,
-                edge.logicData.conditionValue,
+              String.valueOf(edge.logicData.id)
             }).send();
           }
 
           String conditionPrefix = getInputValueString(condition.value) == null ? "" : "GET_";
           String actionPrefix = getInputValueString(action.value) == null ? "" : "SET_";
-          networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_LOGIC", new String[] {
+          edge.logicData.id = Integer.parseInt(networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_LOGIC", new String[] {
               edge.to.deviceIP.getAddressString(),
               actionPrefix + ((String) action.code.getSelectedItem()).toUpperCase(),
               "[" + getInputValueString(action.value) + "]",
@@ -503,7 +496,7 @@ public class UserUI extends JFrame {
               },
               getInputValueString(condition.value),
               String.valueOf(prioVal.getValue())
-          }).send();
+          }).send().getResult());
 
           refreshGraph();
         } else if (evt.getNewValue().equals(pane.getOptions()[0] /* Cancel button */)) {
@@ -514,14 +507,7 @@ public class UserUI extends JFrame {
           // TODO: CHANGE TO USE THE edge.logicData values instead of the current
           // temporary
           networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
-              edge.to.deviceIP.getAddressString(),
-              ((String) edge.logicData.actionCode).toUpperCase(),
-              edge.logicData.actionParams,
-
-              edge.from.deviceIP.getAddressString(),
-              ((String) edge.logicData.conditionCode).toUpperCase(),
-              edge.logicData.conditionType,
-              edge.logicData.conditionValue,
+            String.valueOf(edge.logicData.id)
           }).send();
 
           refreshGraph();
@@ -559,22 +545,24 @@ public class UserUI extends JFrame {
     // The logics stored one after the other in 6 element chunks
     String[] combined = parseStringArray(logics);
 
-    for (int i = 0; i < combined.length; i += 8) {
-      if (i >= combined.length - 7)
+    for (int i = 0; i < combined.length; i += 9) {
+      if (i >= combined.length - 8)
         break;
 
-      String ipA = combined[i + 3];
-      String ipB = combined[i];
+      String ipA = combined[i + 4];
+      String ipB = combined[i + 1];
 
       Edge edge = model.addEdge(nodes.get(ipA), nodes.get(ipB));
 
-      edge.logicData.actionCode = combined[i + 1];
-      edge.logicData.actionParams = combined[i + 2];
+      edge.logicData.id = Integer.parseInt(combined[i]);
 
-      edge.logicData.conditionCode = combined[i + 4];
-      edge.logicData.conditionType = combined[i + 5];
-      edge.logicData.conditionValue = combined[i + 6];
-      edge.logicData.priority = combined[i + 7];
+      edge.logicData.actionCode = combined[i + 2];
+      edge.logicData.actionParams = combined[i + 3];
+
+      edge.logicData.conditionCode = combined[i + 5];
+      edge.logicData.conditionType = combined[i + 6];
+      edge.logicData.conditionValue = combined[i + 7];
+      edge.logicData.priority = combined[i + 8];
     }
   }
 
@@ -843,11 +831,6 @@ public class UserUI extends JFrame {
               TimeInput timePicker = new TimeInput();
               if (defaultValue != null)
                 timePicker.setTime(LocalTime.parse(defaultValue, DateTimeFormatter.ISO_LOCAL_TIME));
-              // TODO: Add those comparisons
-              comparisonTypes.remove("Greater than");
-              comparisonTypes.remove("Greater than or equal to");
-              comparisonTypes.remove("Less than");
-              comparisonTypes.remove("Less than or equal to");
               return timePicker;
             default:
               field = new JTextField(10);
@@ -860,6 +843,11 @@ public class UserUI extends JFrame {
     }
 
     return new JTextField(10);
+  }
+
+
+  public void highlightLogic(int id) {
+    graphPanel.highlightEdge(id);
   }
 
   private class Value {

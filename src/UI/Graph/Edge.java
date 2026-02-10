@@ -2,9 +2,11 @@ package UI.Graph;
 
 import java.awt.*;
 import java.awt.geom.Line2D;
+import java.util.concurrent.TimeUnit;
 
 public class Edge {
   public class LogicData {
+    public int id;
     public String actionCode;
     public String actionParams;
     public String conditionCode;
@@ -13,7 +15,8 @@ public class Edge {
     public String priority;
 
     public boolean isEmpty() {
-      return actionCode == null || actionParams == null || conditionCode == null || conditionType == null || conditionValue == null; 
+      return actionCode == null || actionParams == null || conditionCode == null || conditionType == null
+          || conditionValue == null;
     }
   }
 
@@ -28,10 +31,22 @@ public class Edge {
 
   int lastDrawOffsetY;
 
+  private int highlighted = 0;
+
   public Edge(Node from, Node to, int edgeID) {
     this.from = from;
     this.to = to;
     this.edgeID = edgeID;
+  }
+
+  public void highlight() {
+    highlighted++;
+    try {
+      TimeUnit.MILLISECONDS.sleep(510);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    highlighted--;
   }
 
   public void draw(Graphics2D g, int index, int total, boolean selected) {
@@ -70,12 +85,14 @@ public class Edge {
 
     g.setStroke(new BasicStroke(selected ? 3 : 2));
     g.setColor(selected ? Color.BLUE : Color.GRAY);
+    if (highlighted > 0)
+      g.setColor(Color.YELLOW);
     g.drawLine(sx1, sy1, sx2, sy2);
 
     int midX = (x1 + x2) / 2;
     int midY = (y1 + y2) / 2;
 
-    drawArrow(g, midX + ox, midY + oy, px, py, 10);
+    drawArrow(g, midX + ox, midY + oy, px, py, 13);
   }
 
   public boolean contains(Point p) {
@@ -130,21 +147,21 @@ public class Edge {
     int tipX = (int) (posX + px * size * 0.5);
     int tipY = (int) (posY + py * size * 0.5);
 
-    int backX = (int) (posX - px * size * 0.5);
-    int backY = (int) (posY - py * size * 0.5);
+    int backX = (int) Math.floor(posX - px * size * 0.5);
+    int backY = (int) Math.floor(posY - py * size * 0.5);
 
-    int leftX = (int) (backX + dirX * size * 0.6);
-    int leftY = (int) (backY + dirY * size * 0.6);
+    int leftX = (int) Math.floor(backX + dirX * size * 0.6);
+    int leftY = (int) Math.floor(backY + dirY * size * 0.6);
 
-    int rightX = (int) (backX - dirX * size * 0.6);
-    int rightY = (int) (backY - dirY * size * 0.6);
+    int rightX = (int) Math.floor(backX - dirX * size * 0.6);
+    int rightY = (int) Math.floor(backY - dirY * size * 0.6);
 
     Polygon arrow = new Polygon();
     arrow.addPoint(tipX, tipY);
     arrow.addPoint(leftX, leftY);
     arrow.addPoint(rightX, rightY);
 
-    g.setColor(Color.GRAY);
+    // g.setColor(Color.GRAY);
     g.fillPolygon(arrow);
   }
 }

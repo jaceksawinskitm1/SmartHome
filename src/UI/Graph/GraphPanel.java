@@ -5,6 +5,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.AffineTransform;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class GraphPanel extends JPanel {
   public interface NodeConfigHandler {
@@ -147,6 +150,19 @@ public class GraphPanel extends JPanel {
     addMouseListener(mouse);
     addMouseMotionListener(mouse);
     addMouseWheelListener(mouse);
+  }
+
+  public void highlightEdge(int id) {
+    new Thread(() -> {
+      for (Edge e : model.getEdges()) {
+        if (e.logicData.id == id) {
+          repaint();
+          e.highlight();
+          repaint();
+          return;
+        }
+      }
+    }).start();
   }
 
   private ArrayList<Edge> getParallelEdges(Edge target) {
