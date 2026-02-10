@@ -10,9 +10,8 @@ import javax.swing.border.*;
 import javax.swing.*;
 
 import Devices.*;
-import Network.NetworkDevice;
 import Network.NetworkManager;
-import UI.UserUI;
+import Network.UserDevice;
 
 public class SimulationFrame extends JFrame {
   private final SHManager shManager;
@@ -20,18 +19,32 @@ public class SimulationFrame extends JFrame {
   private final DefaultListModel<String> deviceListModel;
   private final Map<String, SHDevice> deviceMap;
   private JPanel propertiesPanel;
+  private UserDevice userDevice;
 
-  public SimulationFrame(SHManager shManager, NetworkManager nm) {
+  public SimulationFrame(SHManager shManager, NetworkManager nm, UserDevice userDevice) {
     this.shManager = shManager;
     this.networkManager = nm;
     this.deviceMap = new HashMap<>();
     this.deviceListModel = new DefaultListModel<>();
+    this.userDevice = userDevice;
 
     setTitle("Symulacja (Admin Environment)");
     setSize(500, 700);
     setLocation(50, 50);
     setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     setLayout(new BorderLayout());
+
+    JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JCheckBox networkAccess = new JCheckBox("Dostęp do sieci");
+    networkAccess.setSelected(true);
+    networkAccess.addActionListener(e -> {
+      if (((JCheckBox)e.getSource()).isSelected())
+        userDevice.connectToLan();
+      else
+        userDevice.disconnectFromLan();
+    });
+    topPanel.add(networkAccess);
+    add(topPanel, BorderLayout.NORTH);
 
     // LISTA
     JSplitPane splitPane = new JSplitPane();

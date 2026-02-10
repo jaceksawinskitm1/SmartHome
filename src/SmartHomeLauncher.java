@@ -28,7 +28,7 @@ public class SmartHomeLauncher {
     // 3. Uruchomienie GUI
     SwingUtilities.invokeLater(() -> {
       // Okno Admina/Boga (dostęp bezpośredni do obiektów)
-      SimulationFrame simFrame = new SimulationFrame(shManager, networkManager);
+      SimulationFrame simFrame = new SimulationFrame(shManager, networkManager, userDevice);
       simFrame.setVisible(true);
 
       userDevice.showUI();

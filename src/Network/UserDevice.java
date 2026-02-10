@@ -15,7 +15,7 @@ public class UserDevice extends NetworkDevice {
   private final ArrayDeque<NetworkManager.Request> queuedRequests = new ArrayDeque<>();
 
   public boolean hasLanAccess() {
-    return lanAccess;
+    return lanAccess && this.getIP() != null;
   }
 
   public void disconnectFromLan() {
@@ -58,8 +58,8 @@ public class UserDevice extends NetworkDevice {
 
     if (hasLanAccess()) {
       // Send all queued requests
-      while (!queuedRequests.isEmpty()) {
-        queuedRequests.pop().send();
+      while (queuedRequests.size() > 0) {
+        queuedRequests.removeFirst().setSource(this.getIP()).send();
       }
     }
 
@@ -71,20 +71,15 @@ public class UserDevice extends NetworkDevice {
     loop();
   }
 
-  public void sendAction(String devID, String code, String[] params) {
-    // Create request
-    String[] p = new String[2 + params.length];
-    p[0] = devID;
-    p[1] = code;
-    System.arraycopy(params, 0, p, 2, params.length);
-    NetworkManager.Request req = this.createRequest(shManager, "ACTION", p);
+  public String sendRequest(IP target, String code, String[] params) {
+    NetworkManager.Request req = this.createRequest(target, code, params);
 
     if (!hasLanAccess()) {
       // Queue request
       queuedRequests.add(req);
     } else {
-      // Send request
-      req.send();
+      return req.setSource(this.getIP()).send().getResult();
     }
+    return "";
   }
 }

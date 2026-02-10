@@ -38,9 +38,7 @@ public class UserUI extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JLabel lbl = new JLabel(capitalizeString(val.name) + ": ");
         panel.add(lbl);
-        String currentValue = networkManager
-            .createRequest(userDevice.getIP(), deviceIP, "GET_" + val.name, new String[] {}).send()
-            .getResult();
+        String currentValue = userDevice.sendRequest(deviceIP, "GET_" + val.name, new String[] {});
 
         JComponent valueComp = generateCondValueField(val.name, rawCodes, currentValue, new ArrayList<>());
 
@@ -58,7 +56,7 @@ public class UserUI extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton valueComp = new JButton(capitalizeString(val.name));
         valueComp.addActionListener(e -> {
-          networkManager.createRequest(userDevice.getIP(), deviceIP, val.name, new String[] {}).send();
+          userDevice.sendRequest(deviceIP, val.name, new String[] {});
         });
 
         panel.add(valueComp);
@@ -88,22 +86,21 @@ public class UserUI extends JFrame {
     graphPanel = new GraphPanel(model);
 
     graphPanel.setNodeConfigHandler(node -> {
+      if (!userDevice.hasLanAccess()) {
+        return;
+      }
+
       JPanel configPanel = new JPanel();
       configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
 
-      NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
+      String rawCodes = userDevice.sendRequest(
           node.deviceIP, "ADVERT", new String[] {});
-      r.send();
 
-      String rawCodes = r.getResult();
       String clean = rawCodes.replace("[", "").replace("]", "");
       String[] codes = clean.split(",");
 
-      String devID = networkManager
-          .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
-              new String[] { node.deviceIP.getAddressString() })
-          .send()
-          .getResult();
+      String devID = userDevice.sendRequest(shmanagerIP, "GET_DEVID",
+          new String[] { node.deviceIP.getAddressString() });
 
       // configPanel.add(Box.createVerticalStrut(10));
 
@@ -130,9 +127,9 @@ public class UserUI extends JFrame {
         String newID = JOptionPane.showInputDialog(null, "Input the new device ID/Name");
 
         if (newID != null && !newID.isBlank()) {
-          String res = networkManager.createRequest(userDevice.getIP(), shmanagerIP, "RENAME_DEVICE", new String[] {
+          String res = userDevice.sendRequest(shmanagerIP, "RENAME_DEVICE", new String[] {
               devID, newID
-          }).send().getResult();
+          });
 
           if (res.equals("true")) {
             refreshGraph();
@@ -147,9 +144,9 @@ public class UserUI extends JFrame {
             "Remove node " + devID + "?\nYou can always add it back using it's IP.");
 
         if (res == JOptionPane.YES_OPTION) {
-          networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_DEVICE", new String[] {
+          userDevice.sendRequest(shmanagerIP, "DEL_DEVICE", new String[] {
               node.deviceIP.getAddressString()
-          }).send();
+          });
           JOptionPane.getRootFrame().dispose();
           refreshGraph();
         }
@@ -161,6 +158,9 @@ public class UserUI extends JFrame {
 
       JButton refreshButton = new JButton("Refresh");
       refreshButton.addActionListener(e -> {
+        if (!userDevice.hasLanAccess())
+          return;
+
         refreshValues(values, rawCodes, node.deviceIP, valuesPanel, valueMap);
         JOptionPane.getRootFrame().pack();
         JOptionPane.getRootFrame().setVisible(true);
@@ -171,8 +171,8 @@ public class UserUI extends JFrame {
         for (Value val : values) {
           if (val.setter && valueMap.containsKey(val)) {
             String txt = getInputValueString(valueMap.get(val));
-            networkManager.createRequest(userDevice.getIP(), node.deviceIP, "SET_" +
-                val.name, new String[] { txt }).send();
+            userDevice.sendRequest(node.deviceIP, "SET_" +
+                val.name, new String[] { txt });
           }
         }
         JOptionPane.getRootFrame().dispose();
@@ -199,6 +199,10 @@ public class UserUI extends JFrame {
     });
 
     graphPanel.setEdgeConfigHandler((edge, isNew) -> {
+      if (!userDevice.hasLanAccess()) {
+        return;
+      }
+
       if (isNew) {
         refreshGraph();
       }
@@ -268,9 +272,9 @@ public class UserUI extends JFrame {
     addButton.addActionListener(e -> {
       System.out.println(ipPrefix + Integer.parseInt(ipField.getText()));
       try {
-        String res = networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_DEVICE", new String[] {
+        String res = userDevice.sendRequest(shmanagerIP, "ADD_DEVICE", new String[] {
             new IP(ipPrefix + Integer.parseInt(ipField.getText())).getAddressString(), idField.getText()
-        }).send().getResult();
+        });
 
         if (res.equals("true")) {
           refreshGraph();
@@ -310,6 +314,9 @@ public class UserUI extends JFrame {
   }
 
   protected void refreshGraph() {
+    if (!userDevice.hasLanAccess())
+      return;
+
     SwingUtilities.invokeLater(() -> {
       scanNetwork();
       model.clearEdges();
@@ -339,8 +346,8 @@ public class UserUI extends JFrame {
   }
 
   private void findSHManager() {
-    shmanagerIP = new IP(networkManager.createRequest(userDevice.getIP(), networkManager.getBroadcastAddress(),
-        "FINDSHMANAGER", new String[] {}).send().getResult());
+    shmanagerIP = new IP(userDevice.sendRequest(networkManager.getBroadcastAddress(),
+        "FINDSHMANAGER", new String[] {}));
   };
 
   private JPanel createLogicConfigPanel(Edge edge, JOptionPane pane, JDialog dialog) {
@@ -350,21 +357,12 @@ public class UserUI extends JFrame {
     JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     // conditionPanel.setPreferredSize(new Dimension(600, 250));
 
-    NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(),
-        edge.from.deviceIP, "ADVERT", new String[] {});
-    r.send();
-    String rawFrom = r.getResult();
+    String rawFrom = userDevice.sendRequest(edge.from.deviceIP, "ADVERT", new String[] {});
 
-    String fromDevID = networkManager
-        .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
-            new String[] { edge.from.deviceIP.getAddressString() })
-        .send()
-        .getResult();
-    String toDevID = networkManager
-        .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID",
-            new String[] { edge.to.deviceIP.getAddressString() })
-        .send()
-        .getResult();
+    String fromDevID = userDevice.sendRequest(shmanagerIP, "GET_DEVID",
+        new String[] { edge.from.deviceIP.getAddressString() });
+    String toDevID = userDevice.sendRequest(shmanagerIP, "GET_DEVID",
+        new String[] { edge.to.deviceIP.getAddressString() });
 
     // Font labelFont = new Font("Serif", Font.BOLD, 20);
     JLabel ifLabel = new JLabel("If (" + fromDevID + "): ");
@@ -437,10 +435,7 @@ public class UserUI extends JFrame {
     if (condition.value != null)
       conditionPanel.add(condition.value);
 
-    r = networkManager.createRequest(userDevice.getIP(),
-        edge.to.deviceIP, "ADVERT", new String[] {});
-    r.send();
-    String rawTo = r.getResult();
+    String rawTo = userDevice.sendRequest(edge.to.deviceIP, "ADVERT", new String[] {});
 
     action = generateCondition(rawTo, edge.logicData.actionCode, edge.logicData.actionParams, true, toDevID);
     if (action == null) {
@@ -496,14 +491,14 @@ public class UserUI extends JFrame {
         if (evt.getNewValue().equals(pane.getOptions()[1] /* OK button */)) {
           // OK
           if (!edge.logicData.isEmpty()) {
-            networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
+            userDevice.sendRequest(shmanagerIP, "DEL_LOGIC", new String[] {
                 String.valueOf(edge.logicData.id)
-            }).send();
+            });
           }
 
           String conditionPrefix = getInputValueString(condition.value) == null ? "" : "GET_";
           String actionPrefix = getInputValueString(action.value) == null ? "" : "SET_";
-          edge.logicData.id = Integer.parseInt(networkManager.createRequest(userDevice.getIP(), shmanagerIP,
+          edge.logicData.id = Integer.parseInt(userDevice.sendRequest(shmanagerIP,
               "ADD_LOGIC", new String[] {
                   edge.to.deviceIP.getAddressString(),
                   actionPrefix + ((String) action.code.getSelectedItem()).toUpperCase(),
@@ -522,7 +517,7 @@ public class UserUI extends JFrame {
                   },
                   getInputValueString(condition.value),
                   String.valueOf(prioVal.getValue())
-              }).send().getResult());
+              }));
 
           refreshGraph();
         } else if (evt.getNewValue().equals(pane.getOptions()[0] /* Cancel button */)) {
@@ -532,9 +527,9 @@ public class UserUI extends JFrame {
           // Delete
           // TODO: CHANGE TO USE THE edge.logicData values instead of the current
           // temporary
-          networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
+          userDevice.sendRequest(shmanagerIP, "DEL_LOGIC", new String[] {
               String.valueOf(edge.logicData.id)
-          }).send();
+          });
 
           refreshGraph();
         }
@@ -556,9 +551,7 @@ public class UserUI extends JFrame {
       int x = (int) Math.round(Math.cos(angle) * 100) + 200;
       int y = (int) Math.round(Math.sin(angle) * 100) + 200;
 
-      String devID = networkManager
-          .createRequest(userDevice.getIP(), shmanagerIP, "GET_DEVID", new String[] { discoveredIPs.get(i) }).send()
-          .getResult();
+      String devID = userDevice.sendRequest(shmanagerIP, "GET_DEVID", new String[] { discoveredIPs.get(i) });
 
       Node node = new Node(x, y, devID, new IP(discoveredIPs.get(i)));
       node = model.addNode(node);
@@ -566,9 +559,7 @@ public class UserUI extends JFrame {
     }
     model.endNodeGarbageCollect();
 
-    String logics = networkManager
-        .createRequest(userDevice.getIP(), shmanagerIP, "GET_LOGICS", new String[] {}).send()
-        .getResult();
+    String logics = userDevice.sendRequest(shmanagerIP, "GET_LOGICS", new String[] {});
 
     // The logics stored one after the other in 6 element chunks
     String[] combined = parseStringArray(logics);
@@ -597,8 +588,8 @@ public class UserUI extends JFrame {
   private void scanNetwork() {
     discoveredIPs.clear();
     log("Rozpoczynanie skanowania...");
-    String devIps = networkManager.createRequest(userDevice.getIP(), shmanagerIP,
-        "GET_DEVICES", new String[] {}).send().getResult();
+    String devIps = userDevice.sendRequest(shmanagerIP,
+        "GET_DEVICES", new String[] {});
     String clean = devIps.replace("[", "").replace("]", "");
     String[] ips = clean.split(",");
 
@@ -607,10 +598,9 @@ public class UserUI extends JFrame {
         continue;
       }
 
-      NetworkManager.Request r = networkManager.createRequest(userDevice.getIP(), new IP(targetIP), "ADVERT",
+      String res = userDevice.sendRequest(new IP(targetIP), "ADVERT",
           new String[] {});
-      r.send();
-      if (Objects.equals(r.getResult(), "")) // Device has no netcodes
+      if (Objects.equals(res, "")) // Device has no netcodes
         return;
       if (!discoveredIPs.contains(targetIP))
         discoveredIPs.add(targetIP);

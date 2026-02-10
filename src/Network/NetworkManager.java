@@ -19,6 +19,9 @@ public class NetworkManager {
     private String result = null;
 
     public Request send() {
+      if (source == null || target == null)
+        throw new NetworkException("Incomplete request: missing IP address/addresses");
+
       // TODO: handle invalid requests
       this.received = true;
 
@@ -39,9 +42,6 @@ public class NetworkManager {
     }
 
     public Request(IP source, IP target, String code, String[] params) {
-      if (source == null || target == null)
-        throw new NetworkException("Incomplete request: missing IP address/addresses");
-
       this.source = source;
       this.target = target;
       this.code = code;
@@ -90,6 +90,10 @@ public class NetworkManager {
       this.target = target;
       this.code = code;
       this.params = params;
+    }
+
+    public Request setSource(IP source) {
+      return new Request(source, this.target, this.code, this.params);
     }
 
     public boolean hasResult() {
