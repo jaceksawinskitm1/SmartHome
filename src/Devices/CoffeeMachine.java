@@ -9,7 +9,6 @@ public class CoffeeMachine extends SHDevice {
 
   private Status status = Status.IDLE; // IDLE, GRINDING, BREWING, READY
   private double progress = 0.0; // 0% - 100% postępu parzenia
-  private int scheduleTimer = -1; // Odliczanie do startu (-1 = brak harmonogramu)
 
   public CoffeeMachine() {
     this.status = Status.IDLE;
@@ -19,21 +18,6 @@ public class CoffeeMachine extends SHDevice {
 
     registerNetworkCode("COFFEE", "NULL", (String[] args) -> {
       startProcess();
-    });
-
-    // Ustawienie harmonogramu (za ile cykli ma zrobić kawę)
-    // np. SET_TIMER 100 -> za 100 cykli włączy się ekspres
-    registerNetworkCode("SET_TIMER", "FLOAT", (String[] args) -> {
-      if (args.length > 0) {
-        try {
-          int ticks = Integer.parseInt(args[0]);
-          setTimer(ticks);
-          return "TIMER_SET_" + ticks;
-        } catch (NumberFormatException e) {
-          return "ERROR";
-        }
-      }
-      return "ERROR";
     });
   }
 
@@ -52,12 +36,15 @@ public class CoffeeMachine extends SHDevice {
     return this.progress;
   }
 
-  public void setTimer(int ticks) {
-    this.scheduleTimer = ticks;
-  }
-
   public String getStatus() {
-    return status + " (" + (int) getProgress() + "%)";
+    return status + " (" + (int) (getProgress() * 100) + "%)";
+  }
+  
+  public void takeCoffee() {
+    if (this.status == Status.READY) {
+      this.status = Status.IDLE;
+      this.progress = 0;
+    }
   }
 
   private void loop() {

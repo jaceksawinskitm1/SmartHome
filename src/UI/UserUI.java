@@ -12,8 +12,9 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.text.Format;
 import java.text.NumberFormat;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class UserUI extends JFrame {
@@ -27,6 +28,7 @@ public class UserUI extends JFrame {
   protected ConditionStructure condition;
 
   private IP shmanagerIP;
+
 
   void refreshValues(ArrayList<Value> values, String rawCodes, IP deviceIP, JPanel parent,
       HashMap<Value, JComponent> valueMap) {
@@ -227,7 +229,8 @@ public class UserUI extends JFrame {
     JPanel addDevicePanel = new JPanel();
     addDevicePanel.setLayout(new BoxLayout(addDevicePanel, BoxLayout.Y_AXIS));
     JPanel addIpPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    String ipPrefix = networkManager.getBroadcastAddress().getAddressString().substring(0, networkManager.getBroadcastAddress().getAddressString().length() - 3);
+    String ipPrefix = networkManager.getBroadcastAddress().getAddressString().substring(0,
+        networkManager.getBroadcastAddress().getAddressString().length() - 3);
     JLabel ipLabel = new JLabel("IP: " + ipPrefix);
     JFormattedTextField ipField = new JFormattedTextField(NumberFormat.getIntegerInstance());
     ipField.setColumns(3);
@@ -243,12 +246,11 @@ public class UserUI extends JFrame {
     addDevicePanel.add(addIpPanel);
     addDevicePanel.add(addIdPanel);
 
-
     JButton addButton = new JButton("Add");
     addButton.addActionListener(e -> {
       System.out.println(ipPrefix + Integer.parseInt(ipField.getText()));
       networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_DEVICE", new String[] {
-              new IP(ipPrefix + Integer.parseInt(ipField.getText())).getAddressString(), idField.getText()
+          new IP(ipPrefix + Integer.parseInt(ipField.getText())).getAddressString(), idField.getText()
       }).send();
       refreshGraph();
       JOptionPane.getRootFrame().dispose();
@@ -260,19 +262,19 @@ public class UserUI extends JFrame {
     });
 
     Object[] options = new Object[] {
-            addButton, cancelButton
+        addButton, cancelButton
     };
 
     addDeviceButton.addActionListener(e -> {
       JOptionPane.showOptionDialog(
-              null,
-              addDevicePanel,
-              "Add device",
-              JOptionPane.DEFAULT_OPTION,
-              JOptionPane.INFORMATION_MESSAGE,
-              null,
-              options,
-              options[0]);
+          null,
+          addDevicePanel,
+          "Add device",
+          JOptionPane.DEFAULT_OPTION,
+          JOptionPane.INFORMATION_MESSAGE,
+          null,
+          options,
+          options[0]);
     });
     topPanel.add(refreshButton, BorderLayout.WEST);
     topPanel.add(addDeviceButton, BorderLayout.EAST);
@@ -471,23 +473,25 @@ public class UserUI extends JFrame {
           if (!edge.logicData.isEmpty()) {
             networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
                 edge.to.deviceIP.getAddressString(),
-                "SET_" + ((String) edge.logicData.actionCode).toUpperCase(),
+                ((String) edge.logicData.actionCode).toUpperCase(),
                 edge.logicData.actionParams,
 
                 edge.from.deviceIP.getAddressString(),
-                "GET_" + ((String) edge.logicData.conditionCode).toUpperCase(),
+                ((String) edge.logicData.conditionCode).toUpperCase(),
                 edge.logicData.conditionType,
                 edge.logicData.conditionValue,
             }).send();
           }
 
+          String conditionPrefix = getInputValueString(condition.value) == null ? "" : "GET_";
+          String actionPrefix = getInputValueString(action.value) == null ? "" : "SET_";
           networkManager.createRequest(userDevice.getIP(), shmanagerIP, "ADD_LOGIC", new String[] {
               edge.to.deviceIP.getAddressString(),
-              "SET_" + ((String) action.code.getSelectedItem()).toUpperCase(),
+              actionPrefix + ((String) action.code.getSelectedItem()).toUpperCase(),
               "[" + getInputValueString(action.value) + "]",
 
               edge.from.deviceIP.getAddressString(),
-              "GET_" + ((String) condition.code.getSelectedItem()).toUpperCase(),
+              conditionPrefix + ((String) condition.code.getSelectedItem()).toUpperCase(),
               switch ((String) condType.getSelectedItem()) {
                 case "Equals" -> "EQUAL";
                 case "Not equals" -> "NOT_EQUAL";
@@ -511,11 +515,11 @@ public class UserUI extends JFrame {
           // temporary
           networkManager.createRequest(userDevice.getIP(), shmanagerIP, "DEL_LOGIC", new String[] {
               edge.to.deviceIP.getAddressString(),
-              "SET_" + ((String) edge.logicData.actionCode).toUpperCase(),
+              ((String) edge.logicData.actionCode).toUpperCase(),
               edge.logicData.actionParams,
 
               edge.from.deviceIP.getAddressString(),
-              "GET_" + ((String) edge.logicData.conditionCode).toUpperCase(),
+              ((String) edge.logicData.conditionCode).toUpperCase(),
               edge.logicData.conditionType,
               edge.logicData.conditionValue,
           }).send();
@@ -564,10 +568,10 @@ public class UserUI extends JFrame {
 
       Edge edge = model.addEdge(nodes.get(ipA), nodes.get(ipB));
 
-      edge.logicData.actionCode = capitalizeString(combined[i + 1].replaceFirst("^SET_", ""));
+      edge.logicData.actionCode = combined[i + 1];
       edge.logicData.actionParams = combined[i + 2];
 
-      edge.logicData.conditionCode = capitalizeString(combined[i + 4].replaceFirst("^GET_", ""));
+      edge.logicData.conditionCode = combined[i + 4];
       edge.logicData.conditionType = combined[i + 5];
       edge.logicData.conditionValue = combined[i + 6];
       edge.logicData.priority = combined[i + 7];
@@ -693,7 +697,7 @@ public class UserUI extends JFrame {
     for (Value val : values) {
       if (setter ? val.setter : val.getter) {
         res.add(capitalizeString(val.name));
-      } else if (!val.setter && !val.getter) {
+      } else if (setter && !val.setter && !val.getter) {
         // Action
         res.add(capitalizeString(val.name));
       }
@@ -711,7 +715,7 @@ public class UserUI extends JFrame {
 
     JComboBox box = new JComboBox(res.toArray(new String[] {}));
     if (defaultValue != null) {
-      box.setSelectedItem(capitalizeString(defaultValue));
+      box.setSelectedItem(capitalizeString(defaultValue.replaceFirst("^SET_", "")));
     }
     return box;
   }
@@ -733,6 +737,9 @@ public class UserUI extends JFrame {
     if (input instanceof JButton) {
       // Button for color choosing
       return ((JButton) input).getText();
+    }
+    if (input instanceof TimeInput) {
+      return ((TimeInput) input).getTime().format(DateTimeFormatter.ISO_LOCAL_TIME);
     }
 
     return "MISSING TYPE!!!";
@@ -793,9 +800,9 @@ public class UserUI extends JFrame {
 
               colorButton.addActionListener(e -> {
                 Color chosen = JColorChooser.showDialog(
-                        colorButton,
-                        "Choose Color",
-                        Color.decode(colorButton.getText()));
+                    colorButton,
+                    "Choose Color",
+                    Color.decode(colorButton.getText()));
 
                 if (chosen != null) {
                   String color = String.format("#%06X", (0xFFFFFF & chosen.getRGB()));
@@ -832,6 +839,16 @@ public class UserUI extends JFrame {
               comparisonTypes.remove("Less than");
               comparisonTypes.remove("Less than or equal to");
               return checkBox;
+            case "TIME":
+              TimeInput timePicker = new TimeInput();
+              if (defaultValue != null)
+                timePicker.setTime(LocalTime.parse(defaultValue, DateTimeFormatter.ISO_LOCAL_TIME));
+              // TODO: Add those comparisons
+              comparisonTypes.remove("Greater than");
+              comparisonTypes.remove("Greater than or equal to");
+              comparisonTypes.remove("Less than");
+              comparisonTypes.remove("Less than or equal to");
+              return timePicker;
             default:
               field = new JTextField(10);
               if (defaultValue != null)

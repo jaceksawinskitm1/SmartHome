@@ -371,11 +371,12 @@ public class SHManager extends NetworkDevice {
 
   private void loop() {
     // Runs every second
-
+    
     // Try every logic connection
     logics.sort((a, b) -> {
       return Integer.compare(a.priority, b.priority);
     });
+
 
     for (DeviceLogic logic : logics) {
       logic.Try();

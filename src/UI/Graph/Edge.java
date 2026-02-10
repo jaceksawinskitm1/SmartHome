@@ -13,7 +13,7 @@ public class Edge {
     public String priority;
 
     public boolean isEmpty() {
-      return actionCode == null || actionParams == null || conditionCode == null || conditionType == null || conditionValue == null || priority == null; 
+      return actionCode == null || actionParams == null || conditionCode == null || conditionType == null || conditionValue == null; 
     }
   }
 
