@@ -27,10 +27,13 @@ public abstract class SHDevice extends NetworkDevice {
       setManager(ips[0]);
     });
 
+    registerNetworkCode("_DISCONNECT_MANAGER", "NULL", (IP[] ips, String[] params) -> {
+      setManager(null);
+    });
     // Wait before advertising to allow for manual connecting
     Thread thread = new Thread(() -> {
       try {
-        TimeUnit.SECONDS.sleep(2);
+        TimeUnit.SECONDS.sleep(1);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }

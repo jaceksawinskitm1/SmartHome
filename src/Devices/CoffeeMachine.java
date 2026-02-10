@@ -22,7 +22,7 @@ public class CoffeeMachine extends SHDevice {
   }
 
   public void startProcess() {
-    if (this.status == Status.GRINDING)
+    if (this.status != Status.IDLE)
       return;
 
     this.status = Status.GRINDING;

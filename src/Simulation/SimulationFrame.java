@@ -112,6 +112,15 @@ public class SimulationFrame extends JFrame {
     }
   }
 
+
+  public void deleteDevice(SHDevice device) {
+    if (device != null) {
+      shManager.deregisterDevice(device.getIP());
+      deviceMap.remove(device.getIP().getAddressString(), device);
+      deviceListModel.removeElement(device.getIP().getAddressString());
+    }
+  }
+
   SHDevice current = null;
 
   private void showDeviceProperties(SHDevice device) {
@@ -121,6 +130,11 @@ public class SimulationFrame extends JFrame {
     current = device;
 
     propertiesPanel.removeAll();
+    JButton deleteButton = new JButton("Usuń urządzenie");
+    deleteButton.addActionListener(e -> {
+      deleteDevice(current);
+    });
+
     propertiesPanel.setBorder(new TitledBorder(device.getClass().getSimpleName()));
 
     // --- RENDEROWANIE ZALEŻNE OD TYPU ---
@@ -144,20 +158,9 @@ public class SimulationFrame extends JFrame {
         propertiesPanel.add(lbl);
       }
       case CCTV c -> {
-        JCheckBox on = new JCheckBox("Zasilanie", c.isOn());
-        on.addActionListener(e -> c.setStatus(on.isSelected()));
         JCheckBox move = new JCheckBox("Symuluj RUCH", c.isMovementDetected());
         move.addActionListener(e -> c.setMovement(move.isSelected()));
-
-        JPanel led = new JPanel();
-        led.setBackground(c.isOn() && c.isMovementDetected() ? Color.RED : Color.GRAY);
-        led.setPreferredSize(new Dimension(20, 20));
-        led.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-
-        propertiesPanel.add(on);
         propertiesPanel.add(move);
-        propertiesPanel.add(new JLabel("LED Detekcji:"));
-        propertiesPanel.add(led);
       }
       case TV tv -> {
         JCheckBox on = new JCheckBox("Power", tv.isOn());
@@ -265,6 +268,9 @@ public class SimulationFrame extends JFrame {
             + networkManager.createRequest(shManager.getIP(), device.getIP(), "ADVERT", new String[] {})));
       }
     }
+
+
+    propertiesPanel.add(deleteButton);
     propertiesPanel.revalidate();
     propertiesPanel.repaint();
   }

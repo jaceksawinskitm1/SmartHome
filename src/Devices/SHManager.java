@@ -7,6 +7,8 @@ import Network.NetworkManager;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -58,7 +60,7 @@ public class SHManager extends NetworkDevice {
       if (!comparator.test()) {
         return false;
       }
-      
+
       return true;
     }
 
@@ -205,26 +207,45 @@ public class SHManager extends NetworkDevice {
     return networkManager;
   }
 
-  public void renameDevice(String oldID, String newID) {
+  public boolean renameDevice(String oldID, String newID) {
     if (!devices.containsKey(oldID))
-      return;
+      return false;
+
+    if (devices.containsKey(newID))
+      return false;
 
     IP device = devices.get(oldID);
     devices.remove(oldID);
     devices.put(newID, device);
+
+    return true;
   }
 
-  public void registerDevice(String id, IP dev) {
+  public boolean registerDevice(String id, IP dev) {
     if (devices.containsValue(dev))
-      return;
+      return false;
+
+    if (devices.containsKey(id))
+      return false;
 
     // dev.leaseIP(this.getNetworkManager());
     networkManager.createRequest(this.getIP(), dev, "_CONNECT_MANAGER", new String[] {}).send();
     devices.put(id, dev);
+    return true;
   }
 
-  public void deregisterDevice(String id) {
-    devices.remove(id);
+  public void deregisterDevice(IP deviceIP) {
+    for (Iterator<Map.Entry<String, IP>> it = devices.entrySet().iterator(); it.hasNext();) {
+    Map.Entry<String, IP> entry = it.next();
+      if (entry.getValue().equals(deviceIP)) {
+        networkManager.createRequest(this.getIP(), deviceIP, "_DISCONNECT_MANAGER", new String[] {}).send();
+        for (int i = logics.size() - 1; i >= 0; i--) {
+          if (logics.get(i).devA.equals(deviceIP) || logics.get(i).devB.equals(deviceIP))
+            deregisterLogic(i);
+        }
+        it.remove();
+      }
+    }
   }
 
   public String getDeviceId(IP ip) {
@@ -373,12 +394,18 @@ public class SHManager extends NetworkDevice {
 
     registerNetworkCode("ADD_DEVICE", "NULL", (IP[] ips, String[] params) -> {
       // params: device_ip, device_id
-      registerDevice(params[1], new IP(params[0]));
+      return registerDevice(params[1], new IP(params[0])) ? "true" : "false";
+    });
+
+    registerNetworkCode("DEL_DEVICE", "NULL", (IP[] ips, String[] params) -> {
+      // params: device_ip
+      System.out.println("Deleting device " + params[0]);
+      deregisterDevice(new IP(params[0]));
     });
 
     registerNetworkCode("RENAME_DEVICE", "NULL", (IP[] ips, String[] params) -> {
       // params: device_id_old, device_id_new
-      renameDevice(params[0], params[1]);
+      return renameDevice(params[0], params[1]) ? "true" : "false";
     });
   }
 
