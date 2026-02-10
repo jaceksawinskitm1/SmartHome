@@ -38,6 +38,9 @@ public class CoffeeMachine extends SHDevice {
   }
 
   public void startProcess() {
+    if (this.status == Status.GRINDING)
+      return;
+
     this.status = Status.GRINDING;
     this.progress = 0;
     

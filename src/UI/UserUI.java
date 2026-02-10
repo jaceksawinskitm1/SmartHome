@@ -394,7 +394,8 @@ public class UserUI extends JFrame {
 
         conditionPanel.add(condition.code);
         conditionPanel.add(condType);
-        conditionPanel.add(condition.value);
+        if (condition.value != null)
+          conditionPanel.add(condition.value);
 
         conditionPanel.revalidate();
         conditionPanel.repaint();
@@ -406,7 +407,8 @@ public class UserUI extends JFrame {
 
     conditionPanel.add(condition.code);
     conditionPanel.add(condType);
-    conditionPanel.add(condition.value);
+    if (condition.value != null)
+      conditionPanel.add(condition.value);
 
     r = networkManager.createRequest(userDevice.getIP(),
         edge.to.deviceIP, "ADVERT", new String[] {});
@@ -426,7 +428,8 @@ public class UserUI extends JFrame {
         actionPanel.add(thenLabel);
         updateCondition(rawTo, action);
         actionPanel.add(action.code);
-        actionPanel.add(action.value);
+        if (action.value != null)
+          actionPanel.add(action.value);
 
         actionPanel.revalidate();
         actionPanel.repaint();
@@ -437,7 +440,8 @@ public class UserUI extends JFrame {
     });
 
     actionPanel.add(action.code);
-    actionPanel.add(action.value);
+    if (action.value != null)
+      actionPanel.add(action.value);
 
     dialogPanel.add(conditionPanel);
     dialogPanel.add(actionPanel);
@@ -689,6 +693,9 @@ public class UserUI extends JFrame {
     for (Value val : values) {
       if (setter ? val.setter : val.getter) {
         res.add(capitalizeString(val.name));
+      } else if (!val.setter && !val.getter) {
+        // Action
+        res.add(capitalizeString(val.name));
       }
     }
     if (res.size() == 0) {
@@ -710,6 +717,8 @@ public class UserUI extends JFrame {
   }
 
   private String getInputValueString(JComponent input) {
+    if (input == null)
+      return null;
     if (input instanceof JColorChooser)
       return String.format("#%06X", (0xFFFFFF & ((JColorChooser) input).getColor().getRGB()));
     if (input instanceof JTextField) {
@@ -744,85 +753,91 @@ public class UserUI extends JFrame {
     }
 
     for (Value val : values) {
-      if (val.getter && val.name.equals(paramName)) {
-        switch (val.type) {
-          case "INT":
-            JFormattedTextField tf = new JFormattedTextField(NumberFormat.getIntegerInstance());
-            tf.setColumns(10);
-            if (defaultValue != null)
-              tf.setValue(Integer.parseInt(defaultValue));
-            return tf;
-          case "FLOAT":
-            tf = new JFormattedTextField(NumberFormat.getNumberInstance());
-            tf.setColumns(10);
-            if (defaultValue != null)
-              tf.setValue(Float.parseFloat(defaultValue));
-            return tf;
-          case "STRING":
-            JTextField field = new JTextField(10);
-            if (defaultValue != null)
-              field.setText(defaultValue);
-            comparisonTypes.remove("Greater than");
-            comparisonTypes.remove("Greater than or equal to");
-            comparisonTypes.remove("Less than");
-            comparisonTypes.remove("Less than or equal to");
-            return field;
-          case "COLOR":
-            JButton colorButton = new JButton("#FFFFFF");
+      if (val.name.equals(paramName)) {
+        if (!val.getter && !val.setter) {
+          // Action
+          return null;
+        }
+        if (val.getter) {
+          switch (val.type) {
+            case "INT":
+              JFormattedTextField tf = new JFormattedTextField(NumberFormat.getIntegerInstance());
+              tf.setColumns(10);
+              if (defaultValue != null)
+                tf.setValue(Integer.parseInt(defaultValue));
+              return tf;
+            case "FLOAT":
+              tf = new JFormattedTextField(NumberFormat.getNumberInstance());
+              tf.setColumns(10);
+              if (defaultValue != null)
+                tf.setValue(Float.parseFloat(defaultValue));
+              return tf;
+            case "STRING":
+              JTextField field = new JTextField(10);
+              if (defaultValue != null)
+                field.setText(defaultValue);
+              comparisonTypes.remove("Greater than");
+              comparisonTypes.remove("Greater than or equal to");
+              comparisonTypes.remove("Less than");
+              comparisonTypes.remove("Less than or equal to");
+              return field;
+            case "COLOR":
+              JButton colorButton = new JButton("#FFFFFF");
 
-            if (defaultValue != null)
-              colorButton.setText(defaultValue);
+              if (defaultValue != null)
+                colorButton.setText(defaultValue);
 
-            colorButton.setBackground(Color.decode(colorButton.getText()));
-            colorButton.setContentAreaFilled(false);
-            colorButton.setOpaque(true);
+              colorButton.setBackground(Color.decode(colorButton.getText()));
+              colorButton.setContentAreaFilled(false);
+              colorButton.setOpaque(true);
 
-            colorButton.addActionListener(e -> {
-              Color chosen = JColorChooser.showDialog(
-                  colorButton,
-                  "Choose Color",
-                  Color.decode(colorButton.getText()));
+              colorButton.addActionListener(e -> {
+                Color chosen = JColorChooser.showDialog(
+                        colorButton,
+                        "Choose Color",
+                        Color.decode(colorButton.getText()));
 
-              if (chosen != null) {
-                String color = String.format("#%06X", (0xFFFFFF & chosen.getRGB()));
-                colorButton.setText(color);
-                colorButton.setBackground(Color.decode(color));
-              }
-            });
+                if (chosen != null) {
+                  String color = String.format("#%06X", (0xFFFFFF & chosen.getRGB()));
+                  colorButton.setText(color);
+                  colorButton.setBackground(Color.decode(color));
+                }
+              });
 
-            comparisonTypes.remove("Greater than");
-            comparisonTypes.remove("Greater than or equal to");
-            comparisonTypes.remove("Less than");
-            comparisonTypes.remove("Less than or equal to");
-            return colorButton;
-          case "RANGE":
-            // Range from 0 to 1
-            JSlider slider = new JSlider();
-            slider.setPaintTrack(true);
-            slider.setPaintTicks(true);
-            Hashtable<Integer, JLabel> table = new Hashtable<>();
-            table.put(0, new JLabel("0"));
-            table.put(50, new JLabel("50"));
-            table.put(100, new JLabel("100"));
-            slider.setLabelTable(table);
-            slider.setPaintLabels(true);
-            if (defaultValue != null)
-              slider.setValue((int) (Double.parseDouble(defaultValue) * 100));
-            return slider;
-          case "BOOL":
-            JCheckBox checkBox = new JCheckBox();
-            if (defaultValue != null)
-              checkBox.setSelected(defaultValue.equals("true"));
-            comparisonTypes.remove("Greater than");
-            comparisonTypes.remove("Greater than or equal to");
-            comparisonTypes.remove("Less than");
-            comparisonTypes.remove("Less than or equal to");
-            return checkBox;
-          default:
-            field = new JTextField(10);
-            if (defaultValue != null)
-              field.setText(defaultValue);
-            return field;
+              comparisonTypes.remove("Greater than");
+              comparisonTypes.remove("Greater than or equal to");
+              comparisonTypes.remove("Less than");
+              comparisonTypes.remove("Less than or equal to");
+              return colorButton;
+            case "RANGE":
+              // Range from 0 to 1
+              JSlider slider = new JSlider();
+              slider.setPaintTrack(true);
+              slider.setPaintTicks(true);
+              Hashtable<Integer, JLabel> table = new Hashtable<>();
+              table.put(0, new JLabel("0"));
+              table.put(50, new JLabel("50"));
+              table.put(100, new JLabel("100"));
+              slider.setLabelTable(table);
+              slider.setPaintLabels(true);
+              if (defaultValue != null)
+                slider.setValue((int) (Double.parseDouble(defaultValue) * 100));
+              return slider;
+            case "BOOL":
+              JCheckBox checkBox = new JCheckBox();
+              if (defaultValue != null)
+                checkBox.setSelected(defaultValue.equals("true"));
+              comparisonTypes.remove("Greater than");
+              comparisonTypes.remove("Greater than or equal to");
+              comparisonTypes.remove("Less than");
+              comparisonTypes.remove("Less than or equal to");
+              return checkBox;
+            default:
+              field = new JTextField(10);
+              if (defaultValue != null)
+                field.setText(defaultValue);
+              return field;
+          }
         }
       }
     }

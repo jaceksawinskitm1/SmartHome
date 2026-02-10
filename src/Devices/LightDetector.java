@@ -16,7 +16,7 @@ public class LightDetector extends SHDevice {
     }
 
     // Setter stanu wykrywacza
-    public void setState(Boolean night) {
+    public void setState(boolean night) {
         this.night = night;
     }
 }

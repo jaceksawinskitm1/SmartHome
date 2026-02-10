@@ -167,7 +167,7 @@ public class SmartHomeLauncher {
                     propertiesPanel.add(new JLabel("Kolor: " + l.getColor()));
                 }
                 case Thermometer t -> {
-                    JLabel lbl = new JLabel("Aktualna Temp: " + String.format("%.1f", t.getTemperature()));
+                    JLabel lbl = new JLabel("Aktualna Temp: " + t.getTemperature());
                     JSlider slider = new JSlider(-10, 40, (int) t.getTemperature());
                     slider.setMajorTickSpacing(10);
                     slider.setPaintTicks(true);
