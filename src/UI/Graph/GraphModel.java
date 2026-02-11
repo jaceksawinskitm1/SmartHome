@@ -58,8 +58,11 @@ public class GraphModel {
   public void endNodeGarbageCollect() {
     for (int id : garbage) {
       for (Iterator<Node> n = nodes.iterator(); n.hasNext();) {
-        if (n.next().getNodeID() == id)
+        Node node = n.next();
+        if (node.getNodeID() == id) {
+            edges.removeIf(edge -> edge.to.equals(node));
           n.remove();
+        }
       }
     }
     garbage = null;
