@@ -1,3 +1,3 @@
 main:
-	cd src; javac --enable-preview --source 21 -d ../out/ SmartHomeLauncher.java
+	cd src; javac --enable-preview --source 23 -d ../out/ SmartHomeLauncher.java
 	cd out; java --enable-preview SmartHomeLauncher
